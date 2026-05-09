@@ -1,0 +1,73 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: IndustrialGasAlarmCorporate
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/industrial_gas_alarm_corp?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
+    username: root
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000          # 默认缓存1小时
+      cache-null-values: false
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 25MB
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/**/*.xml
+  global-config:
+    db-config:
+      id-type: none                   # UUID由应用层生成
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+
+jwt:
+  secret: ${JWT_SECRET:change-me-to-a-secure-random-string-at-least-256-bits}
+  expiration: 86400000               # 24小时 (ms)
+
+# 事件发件箱轮询（MVP 阶段关闭，微服务拆分后开启）
+event-outbox:
+  enabled: false                      # 是否启用定时投递
+  polling-interval: 5000              # 轮询间隔 (ms)
+  max-retry: 5                        # 最大重试次数
+  batch-size: 50                      # 每次投递批次大小
+
+# 操作日志
+operation-log:
+  enabled: true
+  retention-days: 180                 # 日志保留天数
+
+file:
+  upload:
+    allowed-extensions: jpg, jpeg, png, webp
+    max-size: 5242880                 # 5MB
+
+logging:
+  level:
+    com.niit.industrialgasalarmcorporate: DEBUG
+    com.baomidou.mybatisplus: INFO

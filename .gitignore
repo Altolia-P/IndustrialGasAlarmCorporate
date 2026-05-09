@@ -1,0 +1,23 @@
+/target/
+node_modules/
+.idea/
+*.iml
+dist/
+.env.local
+.env.*.local
+
+# 设计文档
+Doc/
+
+# 根目录规则文件
+backend_rules*.md
+frontend_rules*.md
+project_rules*.md
+项目后端起始依赖.md
+
+# 本地配置
+.claude/settings.local.json
+
+# OS
+Thumbs.db
+.DS_Store
