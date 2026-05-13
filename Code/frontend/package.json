@@ -11,24 +11,24 @@
     "format": "prettier --write \"src/**/*.{vue,ts,css}\""
   },
   "dependencies": {
-    "vue": "^3.5.13",
-    "vue-router": "^4.5.0",
-    "pinia": "^2.3.0",
+    "@element-plus/icons-vue": "^2.3.1",
     "axios": "^1.7.9",
     "element-plus": "^2.9.2",
-    "@element-plus/icons-vue": "^2.3.1"
+    "pinia": "^2.3.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.2.3",
-    "vite": "^6.2.0",
-    "vue-tsc": "^2.2.2",
-    "typescript": "~5.7.3",
     "@types/node": "^22.13.0",
-    "eslint": "^9.20.0",
-    "prettier": "^3.5.0",
-    "@vue/eslint-config-typescript": "^14.4.0",
-    "@typescript-eslint/parser": "^8.24.0",
     "@typescript-eslint/eslint-plugin": "^8.24.0",
-    "eslint-plugin-vue": "^9.32.0"
+    "@typescript-eslint/parser": "^8.24.0",
+    "@vitejs/plugin-vue": "^5.2.3",
+    "@vue/eslint-config-typescript": "^14.4.0",
+    "eslint": "^9.20.0",
+    "eslint-plugin-vue": "^9.32.0",
+    "prettier": "^3.5.0",
+    "typescript": "~5.6.3",
+    "vite": "^6.2.0",
+    "vue-tsc": "^2.2.12"
   }
 }

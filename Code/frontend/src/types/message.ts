@@ -1,10 +1,12 @@
 export enum MessageStatus {
   PENDING = 'PENDING',
+  IN_PROGRESS = 'IN_PROGRESS',
   PROCESSED = 'PROCESSED'
 }
 
 export const MessageStatusMap: Record<MessageStatus, string> = {
   [MessageStatus.PENDING]: '未处理',
+  [MessageStatus.IN_PROGRESS]: '处理中',
   [MessageStatus.PROCESSED]: '已处理'
 }
 
@@ -14,10 +16,10 @@ export interface MessageVO {
   phone: string
   content: string
   status: MessageStatus
-  processor: string | null
-  remark: string | null
+  assignedStaffUuid: string
+  assignedStaffName: string
   submittedAt: string
-  processedAt: string | null
+  remark: string
 }
 
 export interface SubmitMessageDTO {
@@ -26,7 +28,12 @@ export interface SubmitMessageDTO {
   content: string
 }
 
-export interface ProcessMessageDTO {
+export interface AssignMessageDTO {
+  staffUuid: string
+  staffName: string
+}
+
+export interface CompleteMessageDTO {
   remark: string
 }
 

@@ -9,6 +9,7 @@ import type { Page } from '@/types/common'
 export const productApi = {
   getPublicList(params: {
     categoryUuid?: string
+    name?: string
     page?: number
     size?: number
   }): Promise<Page<ProductVO>> {

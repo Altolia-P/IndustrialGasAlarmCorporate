@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import type { SubmitMessageDTO, MessageVO, MessageStatus } from '@/types/message'
+import type { SubmitMessageDTO, AssignMessageDTO, CompleteMessageDTO, MessageVO, MessageStatus } from '@/types/message'
 import type { Page } from '@/types/common'
 
 export const messageApi = {
@@ -15,8 +15,11 @@ export const messageApi = {
   }): Promise<Page<MessageVO>> {
     return request.get('/admin/messages', { params })
   },
-  process(uuid: string, remark: string): Promise<null> {
-    return request.put(`/admin/messages/${uuid}/process`, { remark })
+  assign(uuid: string, dto: AssignMessageDTO): Promise<null> {
+    return request.put(`/admin/messages/${uuid}/assign`, dto)
+  },
+  complete(uuid: string, dto: CompleteMessageDTO): Promise<null> {
+    return request.put(`/admin/messages/${uuid}/complete`, dto)
   },
   processBatch(uuids: string[], remark: string): Promise<null> {
     return request.put('/admin/messages/process/batch', { uuids, remark })

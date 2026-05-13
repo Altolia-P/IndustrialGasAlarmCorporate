@@ -1,0 +1,17 @@
+﻿<script setup lang="ts">
+import { computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { solutionDetailMap } from '@/data/solutions'
+
+const router = useRouter()
+const route = useRoute()
+
+const data = computed(() => {
+  const id = (route.params.uuid as string) || 'petrochemical'
+  return solutionDetailMap[id] || solutionDetailMap.petrochemical
+})
+
+function goContact() {
+  router.push('/contact')
+}
+</script>

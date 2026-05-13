@@ -8,7 +8,7 @@
 - 方法/变量：`lowerCamelCase`（如 `getUserById`、`orderList`）
 - 常量：`UPPER_SNAKE_CASE`（如 `MAX_RETRY_COUNT`）
 - 包名：全小写，不使用下划线（如 `com.example.order`）
-- 接口以 `I` 开头：`IOrderAppService`、`IOrderRepository`
+- 接口不加 `I` 前缀，以业务语义命名：`OrderService`、`UserRepository`
 
 ## 不可变性
 
@@ -35,8 +35,7 @@ return userRepository.findById(id)
 
 ## 异常处理
 
-- 业务异常继承 `BusinessException`，包含错误码
-- 系统异常继承 `SystemException`
+- 所有异常继承 `BusinessException`，通过 `ErrorCode` 枚举表示错误码
 - `@ControllerAdvice` 统一处理，不在 Service 层 try-catch 业务异常
 - 日志记录异常时必须带上完整 stack trace
 
