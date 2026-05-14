@@ -95,3 +95,25 @@
 
 ---
 
+## 2026-05-14
+
+| 时间 | 内容 | 状态 |
+|------|------|------|
+| — | /context-restore：恢复工作上下文（token-validation-and-startup-fixes） | ✅ |
+| — | 后端代码审计：25 个接口已编码，4 个缺口（事件监听器/登出/分类管理/密码重置） | ✅ |
+| — | **缺口1**：实现 3 个领域事件监听器（ProductPublishedEventListener / MessageSubmittedEventListener / AccountLockedEventListener） | ✅ |
+| — | **缺口2**：JWT 登出 — JwtBlacklistRepository 注入 AuthServiceImpl + JwtAuthFilter 黑名单检查 + POST /admin/logout + SecurityConfig 放行 | ✅ |
+| — | **缺口3**：后台分类管理 CRUD — CategoryRepository 补 CRUD 方法 + CategoryServiceImpl 缓存驱逐 + AdminCategoryController（4 端点） | ✅ |
+| — | **缺口4**：密码重置 — ResetPasswordDTO + AuthService.resetPassword() + POST /admin/resetPassword | ✅ |
+| — | 总计：6 个新增文件，11 个修改文件 | ✅ |
+| — | 后端编译验证：132 源文件，BUILD SUCCESS | ✅ |
+| — | 详细代码审计：逐文件检查 Controller/Service/Repository/Security/Event 层 | ✅ |
+| — | **BLOCKER修复**：TestConfig 新增 CaptchaRepository + JwtBlacklistRepository mock，修复测试上下文启动失败 | ✅ |
+| — | **BUG修复**：JwtBlacklistRepository 移除 @Profile("!test")，与 CaptchaRepository 保持一致 | ✅ |
+| — | **BUG修复**：AdminCategoryController.updateCategory() 移除无效 @Valid | ✅ |
+| — | **改进**：DataInitializer 扩展为 7 表建库（t_admin_user + t_product + t_product_image + t_product_attribute + t_content + t_category + t_contact_message） | ✅ |
+| — | 编译+测试验证：BUILD SUCCESS，Tests run: 1, Failures: 0 | ✅ |
+| — | 工作日志更新 | ✅ |
+
+---
+

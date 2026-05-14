@@ -2,6 +2,7 @@ package com.niit.industrialgasalarmcorporate.application.auth.service.impl;
 
 import com.niit.industrialgasalarmcorporate.application.auth.dto.LoginDTO;
 import com.niit.industrialgasalarmcorporate.application.auth.dto.RegisterDTO;
+import com.niit.industrialgasalarmcorporate.application.auth.dto.ResetPasswordDTO;
 import com.niit.industrialgasalarmcorporate.application.auth.service.AuthService;
 import com.niit.industrialgasalarmcorporate.application.auth.vo.CaptchaVO;
 import com.niit.industrialgasalarmcorporate.application.auth.vo.LoginResultVO;
@@ -21,6 +22,7 @@ import com.niit.industrialgasalarmcorporate.domain.auth.UserRepository;
 import com.niit.industrialgasalarmcorporate.domain.event.AccountLockedEvent;
 import com.niit.industrialgasalarmcorporate.domain.event.EventBus;
 import com.niit.industrialgasalarmcorporate.infrastructure.redis.CaptchaRepository;
+import com.niit.industrialgasalarmcorporate.infrastructure.redis.JwtBlacklistRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordHasher passwordHasher;
     private final CaptchaGenerator captchaGenerator;
     private final CaptchaRepository captchaRepository;
+    private final JwtBlacklistRepository jwtBlacklistRepository;
 
     @Override
     @Transactional
@@ -100,5 +103,22 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findById(userUuid)
                 .orElseThrow(() -> new UserNotFoundException(userUuid));
         return UserAssembler.toVO(user);
+    }
+
+    @Override
+    public void logout(String token) {
+        long ttlMillis = jwtUtil.getExpirationMillis();
+        jwtBlacklistRepository.add(token, ttlMillis);
+        log.info("用户已登出，Token 已加入黑名单");
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordDTO dto) {
+        User user = userRepository.findByUsername(dto.getUsername())
+                .orElseThrow(() -> new UserNotFoundException(dto.getUsername()));
+        user.changePassword(dto.getNewPassword(), passwordHasher);
+        userRepository.save(user);
+        log.info("密码已重置: username={}, uuid={}", user.getUsername(), user.getUserUuid());
     }
 }

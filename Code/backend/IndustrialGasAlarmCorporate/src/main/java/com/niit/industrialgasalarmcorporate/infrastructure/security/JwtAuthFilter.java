@@ -1,6 +1,7 @@
 package com.niit.industrialgasalarmcorporate.infrastructure.security;
 
 import com.niit.industrialgasalarmcorporate.common.utils.JwtUtil;
+import com.niit.industrialgasalarmcorporate.infrastructure.redis.JwtBlacklistRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -22,6 +23,7 @@ import java.util.List;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final JwtBlacklistRepository jwtBlacklistRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -33,6 +35,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         String token = authHeader.substring(7);
+        if (jwtBlacklistRepository.isBlacklisted(token)) {
+            SecurityContextHolder.clearContext();
+            filterChain.doFilter(request, response);
+            return;
+        }
         try {
             Claims claims = jwtUtil.parseToken(token);
             String userUuid = claims.getSubject();

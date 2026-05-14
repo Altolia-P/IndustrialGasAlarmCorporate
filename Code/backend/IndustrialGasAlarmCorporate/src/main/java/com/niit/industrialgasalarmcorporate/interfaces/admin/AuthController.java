@@ -1,6 +1,7 @@
 package com.niit.industrialgasalarmcorporate.interfaces.admin;
 
 import com.niit.industrialgasalarmcorporate.application.auth.dto.LoginDTO;
+import com.niit.industrialgasalarmcorporate.application.auth.dto.ResetPasswordDTO;
 import com.niit.industrialgasalarmcorporate.application.auth.service.AuthService;
 import com.niit.industrialgasalarmcorporate.application.auth.vo.CaptchaVO;
 import com.niit.industrialgasalarmcorporate.application.auth.vo.LoginResultVO;
@@ -30,5 +31,18 @@ public class AuthController {
     @GetMapping("/currentUser")
     public Result<UserVO> currentUser(@RequestAttribute String userUuid) {
         return Result.ok(authService.getCurrentUser(userUuid));
+    }
+
+    @PostMapping("/logout")
+    public Result<Void> logout(@RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.substring(7);
+        authService.logout(token);
+        return Result.ok("已登出", null);
+    }
+
+    @PostMapping("/resetPassword")
+    public Result<Void> resetPassword(@Valid @RequestBody ResetPasswordDTO dto) {
+        authService.resetPassword(dto);
+        return Result.ok("密码重置成功", null);
     }
 }

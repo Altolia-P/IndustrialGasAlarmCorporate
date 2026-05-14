@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Repository
@@ -37,6 +38,31 @@ public class CategoryRepositoryImpl implements CategoryRepository {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public Optional<Category> findById(String categoryUuid) {
+        CategoryPO po = categoryMapper.selectById(categoryUuid);
+        if (po == null) {
+            return Optional.empty();
+        }
+        return Optional.of(toDomain(po));
+    }
+
+    @Override
+    public void save(Category category) {
+        CategoryPO po = toPO(category);
+        CategoryPO existing = categoryMapper.selectById(category.getCategoryUuid());
+        if (existing != null) {
+            categoryMapper.updateById(po);
+        } else {
+            categoryMapper.insert(po);
+        }
+    }
+
+    @Override
+    public void delete(String categoryUuid) {
+        categoryMapper.deleteById(categoryUuid);
+    }
+
     private Category toDomain(CategoryPO po) {
         return new Category(
                 po.getCategoryUuid(),
@@ -45,5 +71,15 @@ public class CategoryRepositoryImpl implements CategoryRepository {
                 po.getParentUuid(),
                 po.getSortOrder()
         );
+    }
+
+    private CategoryPO toPO(Category category) {
+        CategoryPO po = new CategoryPO();
+        po.setCategoryUuid(category.getCategoryUuid());
+        po.setName(category.getName());
+        po.setType(category.getType().name());
+        po.setParentUuid(category.getParentUuid());
+        po.setSortOrder(category.getSortOrder());
+        return po;
     }
 }

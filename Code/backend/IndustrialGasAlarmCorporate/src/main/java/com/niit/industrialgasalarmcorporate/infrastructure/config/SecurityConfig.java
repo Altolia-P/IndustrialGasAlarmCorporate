@@ -28,6 +28,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/public/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/admin/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/admin/captcha").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/admin/logout").authenticated()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().permitAll()
                 )

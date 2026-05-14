@@ -8,19 +8,17 @@ import java.util.concurrent.TimeUnit;
 
 @Repository
 @RequiredArgsConstructor
-@org.springframework.context.annotation.Profile("!test")
 public class JwtBlacklistRepository {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
-    private static final String BLACKLIST_KEY = "jwt:blacklist";
+    private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
     public void add(String token, long ttlMillis) {
-        redisTemplate.opsForSet().add(BLACKLIST_KEY, token);
-        redisTemplate.expire(BLACKLIST_KEY, ttlMillis, TimeUnit.MILLISECONDS);
+        redisTemplate.opsForValue().set(BLACKLIST_PREFIX + token, "1", ttlMillis, TimeUnit.MILLISECONDS);
     }
 
     public boolean isBlacklisted(String token) {
-        return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(BLACKLIST_KEY, token));
+        return Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + token));
     }
 }
