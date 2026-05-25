@@ -3,6 +3,7 @@ import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
+import { messageApi } from '@/api/message'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -81,29 +82,37 @@ function validate(): string | null {
   return null
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   const err = validate()
   if (err) {
     ElMessage.warning(err)
     return
   }
   submitting.value = true
-  setTimeout(() => {
-    submitting.value = false
+  try {
+    // Compose extra info into content so it survives the DTO mapping
+    const extra: string[] = []
+    if (form.company) extra.push(`公司: ${form.company}`)
+    if (form.email) extra.push(`邮箱: ${form.email}`)
+    if (form.type) extra.push(`咨询类型: ${form.type}`)
+    const content = extra.length > 0
+      ? `${form.message}\n\n---\n${extra.join('\n')}`
+      : form.message
+
+    await messageApi.submit({ name: form.name, phone: form.phone, content })
     ElMessage.success('感谢您的咨询，我们将尽快与您联系！')
-    ElMessage({
-      message: '信息提交的越清晰，留言越快被处理',
-      type: 'info',
-      duration: 4000,
-      customClass: 'contact-tip-message'
-    })
     form.name = ''
     form.company = ''
     form.phone = ''
     form.email = ''
     form.type = ''
     form.message = ''
-  }, 1000)
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    ElMessage.error(err.message || '提交失败，请稍后重试')
+  } finally {
+    submitting.value = false
+  }
 }
 
 function goLogin() {

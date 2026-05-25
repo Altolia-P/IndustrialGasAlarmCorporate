@@ -55,5 +55,8 @@ export const workOrderApi = {
     size?: number
   }): Promise<Page<WorkOrderVO>> {
     return request.get('/staff/workorders', { params })
+  },
+  getUserWorkOrders(params: { page?: number; size?: number }): Promise<Page<WorkOrderVO>> {
+    return request.get('/user/workorders', { params })
   }
 }

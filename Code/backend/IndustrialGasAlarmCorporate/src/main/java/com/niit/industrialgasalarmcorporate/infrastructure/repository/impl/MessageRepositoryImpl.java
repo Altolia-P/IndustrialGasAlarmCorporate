@@ -90,6 +90,21 @@ public class MessageRepositoryImpl implements MessageRepository {
         return contactMessageMapper.selectCount(wrapper) > 0;
     }
 
+    @Override
+    public Page<ContactMessage> findByAssignedStaffUuid(String staffUuid, int page, int size) {
+        LambdaQueryWrapper<ContactMessagePO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ContactMessagePO::getAssignedStaffUuid, staffUuid)
+                .orderByDesc(ContactMessagePO::getSubmittedAt);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<ContactMessagePO> mpPage =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<ContactMessagePO> result =
+                contactMessageMapper.selectPage(mpPage, wrapper);
+        List<ContactMessage> messages = result.getRecords().stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+        return new Page<>(messages, result.getTotal(), (int) result.getSize(), (int) result.getCurrent());
+    }
+
     private ContactMessage toDomain(ContactMessagePO po) {
         return new ContactMessage(
                 po.getMessageUuid(),
@@ -100,6 +115,8 @@ public class MessageRepositoryImpl implements MessageRepository {
                 MessageStatus.valueOf(po.getStatus()),
                 po.getProcessor(),
                 po.getRemark(),
+                po.getAssignedStaffUuid(),
+                po.getAssignedStaffName(),
                 po.getSubmittedAt(),
                 po.getProcessedAt()
         );
@@ -115,6 +132,8 @@ public class MessageRepositoryImpl implements MessageRepository {
         po.setStatus(message.getStatus().name());
         po.setProcessor(message.getProcessor());
         po.setRemark(message.getRemark());
+        po.setAssignedStaffUuid(message.getAssignedStaffUuid());
+        po.setAssignedStaffName(message.getAssignedStaffName());
         po.setSubmittedAt(message.getSubmittedAt());
         po.setProcessedAt(message.getProcessedAt());
         return po;

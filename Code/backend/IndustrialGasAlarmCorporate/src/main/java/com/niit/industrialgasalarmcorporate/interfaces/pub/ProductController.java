@@ -18,9 +18,10 @@ public class ProductController {
     @GetMapping("/products")
     public Result<Page<ProductVO>> getProducts(
             @RequestParam(required = false) String categoryUuid,
+            @RequestParam(required = false) String name,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return Result.ok(productService.findPublicProducts(categoryUuid, page, size));
+        return Result.ok(productService.findPublicProducts(categoryUuid, name, page, size));
     }
 
     @GetMapping("/products/{uuid}")

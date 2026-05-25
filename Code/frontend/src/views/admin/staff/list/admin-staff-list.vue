@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { StaffStatus, StaffStatusMap, StaffRoleMap } from '@/types/staff'
-import { staffList } from '@/data/workorder'
+import { staffApi } from '@/api/staff'
+import type { StaffVO } from '@/types/staff'
+import { useLoading } from '@/composables/use-loading'
+import { usePagination } from '@/composables/use-pagination'
 
 const router = useRouter()
 
@@ -14,9 +17,36 @@ const statusTagType: Record<string, string> = {
   [StaffStatus.BUSINESS_TRIP]: ''
 }
 
+const staff = ref<StaffVO[]>([])
+const { loading, start, stop } = useLoading()
+const { state: pagination, backendPage, setTotal, goToPage } = usePagination()
+
 const searchForm = ref({ name: '', role: '', status: '' })
-const currentPage = ref(1)
-const total = ref(staffList.length)
+
+async function fetchStaff() {
+  start()
+  try {
+    const params: Record<string, unknown> = {
+      page: backendPage.value,
+      size: pagination.value.size
+    }
+    if (searchForm.value.name) params.name = searchForm.value.name
+    if (searchForm.value.role) params.role = searchForm.value.role
+    if (searchForm.value.status) params.status = searchForm.value.status
+    const page = await staffApi.getAdminList(params)
+    staff.value = page.content
+    setTotal(page.totalElements, page.totalPages)
+  } catch {
+    staff.value = []
+    ElMessage.error('加载失败')
+  } finally {
+    stop()
+  }
+}
+
+onMounted(() => {
+  fetchStaff()
+})
 
 function handleCreate() {
   router.push('/admin/staff/create')
@@ -28,18 +58,24 @@ function handleEdit(uuid: string) {
 
 async function handleDelete(uuid: string) {
   await ElMessageBox.confirm('确认删除该员工？', '删除确认', { type: 'warning' })
-  const idx = staffList.findIndex((s) => s.staffUuid === uuid)
-  if (idx !== -1) staffList.splice(idx, 1)
-  total.value = staffList.length
-  ElMessage.success('删除成功')
+  try {
+    await staffApi.remove(uuid)
+    ElMessage.success('删除成功')
+    await fetchStaff()
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    ElMessage.error(err.message || '删除失败')
+  }
 }
 
 function handleSearch() {
-  currentPage.value = 1
+  goToPage(1)
+  fetchStaff()
 }
 
 function handlePageChange(page: number) {
-  currentPage.value = page
+  goToPage(page)
+  fetchStaff()
 }
 </script>
 
@@ -62,8 +98,16 @@ function handlePageChange(page: number) {
       <el-button type="primary" @click="handleCreate">新增员工</el-button>
     </div>
 
-    <div class="table-wrapper">
-      <el-table :data="staffList" stripe style="width:100%">
+    <div v-if="loading" class="loading-state">
+      <el-skeleton :rows="5" animated />
+    </div>
+
+    <div v-else-if="staff.length === 0" class="empty-state">
+      <p>暂无员工</p>
+    </div>
+
+    <div v-else class="table-wrapper">
+      <el-table :data="staff" stripe style="width:100%">
         <el-table-column prop="name" label="姓名" width="100" />
         <el-table-column label="岗位" width="140">
           <template #default="{ row }">
@@ -91,9 +135,9 @@ function handlePageChange(page: number) {
 
     <div class="pagination-bar">
       <el-pagination
-        v-model:current-page="currentPage"
-        :total="total"
-        :page-size="20"
+        v-model:current-page="pagination.page"
+        :total="pagination.totalElements"
+        :page-size="pagination.size"
         layout="total, prev, pager, next"
         @current-change="handlePageChange"
       />
@@ -134,5 +178,24 @@ function handlePageChange(page: number) {
 .pagination-bar {
   display: flex;
   justify-content: flex-end;
+}
+
+.loading-state {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 40px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  color: #9ca3af;
+  font-size: 15px;
 }
 </style>

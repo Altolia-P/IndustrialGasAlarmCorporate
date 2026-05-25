@@ -1,16 +1,36 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { newsItems } from '@/data/home'
-import { contents as sharedContents } from '@/data/content'
+import { contentApi } from '@/api/content'
 import { ContentType, ContentStatus } from '@/types/content'
+import type { ContentVO } from '@/types/content'
+import { useLoading } from '@/composables/use-loading'
 
 const router = useRouter()
 const route = useRoute()
 
+const contentNews = ref<ContentVO[]>([])
+const { loading, start, stop } = useLoading()
+
+async function fetchNews() {
+  start()
+  try {
+    const page = await contentApi.getPublicList({ type: ContentType.NEWS, size: 100 })
+    contentNews.value = page.content.filter((c) => c.status === ContentStatus.PUBLISHED)
+  } catch {
+    contentNews.value = []
+  } finally {
+    stop()
+  }
+}
+
+onMounted(() => {
+  fetchNews()
+})
+
 const allNews = computed(() => {
-  const published = sharedContents
-    .filter((c) => c.type === ContentType.NEWS && c.status === ContentStatus.PUBLISHED)
+  const published = contentNews.value
     .map((c, idx) => ({
       id: 100000 + idx,
       title: c.title,

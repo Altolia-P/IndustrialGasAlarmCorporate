@@ -1,155 +1,90 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
-import { WorkOrderType, WorkOrderStatus, WorkOrderPriority } from '@/types/workorder'
-import { workOrders } from '@/data/workorder'
+import { workOrderApi } from '@/api/workorder'
+import { WorkOrderStatus, WorkOrderStatusMap, WorkOrderPriority, WorkOrderPriorityMap } from '@/types/workorder'
 import type { WorkOrderVO } from '@/types/workorder'
+import { useFormSubmit } from '@/composables/use-form-submit'
+import { useLoading } from '@/composables/use-loading'
 
-// ---------------------------------------------------------------------------
-// 本地展示枚举（保持模板兼容）
-// ---------------------------------------------------------------------------
-
-enum TicketStatus {
-  COMPLETED = 'COMPLETED',
-  IN_PROGRESS = 'IN_PROGRESS'
-}
-
-const TicketStatusText: Record<TicketStatus, string> = {
-  [TicketStatus.COMPLETED]: '已完成',
-  [TicketStatus.IN_PROGRESS]: '处理中'
-}
-
-const TicketStatusClass: Record<TicketStatus, string> = {
-  [TicketStatus.COMPLETED]: 'status-done',
-  [TicketStatus.IN_PROGRESS]: 'status-pending'
-}
-
-enum TicketPriority {
-  URGENT = 'URGENT',
-  HIGH = 'HIGH',
-  NORMAL = 'NORMAL'
-}
-
-const TicketPriorityText: Record<TicketPriority, string> = {
-  [TicketPriority.URGENT]: '紧急',
-  [TicketPriority.HIGH]: '高',
-  [TicketPriority.NORMAL]: '普通'
-}
-
-const TicketPriorityClass: Record<TicketPriority, string> = {
-  [TicketPriority.URGENT]: 'pri-urgent',
-  [TicketPriority.HIGH]: 'pri-high',
-  [TicketPriority.NORMAL]: 'pri-normal'
-}
-
-interface TicketItem {
-  id: string
-  title: string
-  status: TicketStatus
-  priority: TicketPriority
-  date: string
-  handler: string
-  remark: string
-}
-
-const tickets: TicketItem[] = [
-  { id: 'TK-20240315-001', title: 'IS-9000系列探测器安装调试', status: TicketStatus.COMPLETED, priority: TicketPriority.HIGH, date: '2024-03-15', handler: '张工', remark: '已现场完成安装调试，设备运行正常' },
-  { id: 'TK-20240308-002', title: '报警控制器通讯异常排查', status: TicketStatus.IN_PROGRESS, priority: TicketPriority.URGENT, date: '2024-03-08', handler: '李工', remark: '' },
-  { id: 'TK-20240220-003', title: '传感器探头更换服务', status: TicketStatus.COMPLETED, priority: TicketPriority.NORMAL, date: '2024-02-20', handler: '王工', remark: '已完成4个传感器探头更换，2024-08校准到期' }
-]
+const authStore = useAuthStore()
 
 const showForm = ref(false)
-const form = reactive({ title: '', type: '', priority: TicketPriority.NORMAL, description: '' })
-const submitting = ref(false)
+const form = ref({ title: '', type: '', priority: 'LOW', description: '' })
+const tickets = ref<WorkOrderVO[]>([])
+const { loading, start, stop } = useLoading()
 
 const ticketTypes = ['安装调试', '故障排查', '维修服务', '校准服务', '技术咨询']
 
-// ---------------------------------------------------------------------------
-// 工具函数
-// ---------------------------------------------------------------------------
+const priorityOptions = [
+  { label: '普通', value: 'LOW' },
+  { label: '高', value: 'MEDIUM' },
+  { label: '紧急', value: 'HIGH' }
+]
 
-function formatDateTime(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  const h = String(date.getHours()).padStart(2, '0')
-  const min = String(date.getMinutes()).padStart(2, '0')
-  return `${y}-${m}-${d} ${h}:${min}`
+const { loading: submitting, submit: doSubmit } = useFormSubmit(
+  (dto: { title: string; type: string; description: string; priority: string; customerName: string; customerPhone: string }) =>
+    workOrderApi.create(dto),
+  {
+    successMsg: '工单已提交，我们会尽快处理',
+    onSuccess: () => {
+      showForm.value = false
+      form.value = { title: '', type: '', priority: 'LOW', description: '' }
+      fetchTickets()
+    }
+  }
+)
+
+const TYPE_MAP: Record<string, string> = {
+  '安装调试': 'TECH_SUPPORT',
+  '故障排查': 'TECH_SUPPORT',
+  '维修服务': 'AFTER_SALES',
+  '校准服务': 'AFTER_SALES',
+  '技术咨询': 'TECH_SUPPORT'
 }
 
-function generateWorkOrderUuid(): string {
-  const today = new Date()
-  const dateStr =
-    today.getFullYear().toString() +
-    String(today.getMonth() + 1).padStart(2, '0') +
-    String(today.getDate()).padStart(2, '0')
-  const prefix = `TK-${dateStr}`
-
-  const seqs = workOrders
-    .map((w) => w.workOrderUuid)
-    .filter((uuid) => uuid.startsWith(prefix))
-    .map((uuid) => {
-      const parts = uuid.split('-')
-      return parseInt(parts[parts.length - 1], 10)
-    })
-    .filter((n) => !isNaN(n))
-
-  const nextSeq = seqs.length > 0 ? Math.max(...seqs) + 1 : 1
-  return `${prefix}-${String(nextSeq).padStart(3, '0')}`
+async function fetchTickets() {
+  start()
+  try {
+    const page = await workOrderApi.getUserWorkOrders({ size: 100 })
+    tickets.value = page.content
+  } catch {
+    tickets.value = []
+  } finally {
+    stop()
+  }
 }
-
-const PRIORITY_MAP: Record<TicketPriority, WorkOrderPriority> = {
-  [TicketPriority.NORMAL]: WorkOrderPriority.LOW,
-  [TicketPriority.HIGH]: WorkOrderPriority.MEDIUM,
-  [TicketPriority.URGENT]: WorkOrderPriority.HIGH
-}
-
-const TYPE_MAP: Record<string, WorkOrderType> = {
-  '安装调试': WorkOrderType.TECH_SUPPORT,
-  '故障排查': WorkOrderType.TECH_SUPPORT,
-  '维修服务': WorkOrderType.AFTER_SALES,
-  '校准服务': WorkOrderType.AFTER_SALES,
-  '技术咨询': WorkOrderType.TECH_SUPPORT
-}
-
-// ---------------------------------------------------------------------------
-// 提交处理
-// ---------------------------------------------------------------------------
 
 function handleSubmit() {
-  if (!form.title || !form.type) {
+  if (!form.value.title || !form.value.type) {
     ElMessage.warning('请填写工单标题和类型')
     return
   }
-  submitting.value = true
+  doSubmit({
+    title: form.value.title,
+    type: TYPE_MAP[form.value.type] || 'TECH_SUPPORT',
+    description: form.value.description,
+    priority: form.value.priority,
+    customerName: authStore.username || '在线用户',
+    customerPhone: '未填写'
+  })
+}
 
-  const now = formatDateTime(new Date())
+onMounted(() => {
+  fetchTickets()
+})
 
-  const newWorkOrder: WorkOrderVO = {
-    workOrderUuid: generateWorkOrderUuid(),
-    title: form.title,
-    type: TYPE_MAP[form.type] || WorkOrderType.TECH_SUPPORT,
-    description: form.description,
-    status: WorkOrderStatus.PENDING,
-    priority: PRIORITY_MAP[form.priority],
-    customerName: '在线用户',
-    customerPhone: '未填写',
-    assignedStaffUuid: '',
-    assignedStaffName: '',
-    resolution: '',
-    createdAt: now,
-    updatedAt: now
-  }
+const statusTagType: Record<string, string> = {
+  [WorkOrderStatus.PENDING]: 'warning',
+  [WorkOrderStatus.IN_PROGRESS]: 'primary',
+  [WorkOrderStatus.COMPLETED]: 'success'
+}
 
-  workOrders.push(newWorkOrder)
-
-  submitting.value = false
-  showForm.value = false
-  form.title = ''
-  form.type = ''
-  form.priority = TicketPriority.NORMAL
-  form.description = ''
-  ElMessage.success('工单已提交，我们会尽快处理')
+const priorityTagType: Record<string, string> = {
+  [WorkOrderPriority.HIGH]: 'danger',
+  [WorkOrderPriority.MEDIUM]: 'warning',
+  [WorkOrderPriority.LOW]: 'info'
 }
 </script>
 
@@ -177,9 +112,7 @@ function handleSubmit() {
         </el-form-item>
         <el-form-item label="优先级">
           <el-radio-group v-model="form.priority">
-            <el-radio :value="TicketPriority.NORMAL">{{ TicketPriorityText[TicketPriority.NORMAL] }}</el-radio>
-            <el-radio :value="TicketPriority.HIGH">{{ TicketPriorityText[TicketPriority.HIGH] }}</el-radio>
-            <el-radio :value="TicketPriority.URGENT">{{ TicketPriorityText[TicketPriority.URGENT] }}</el-radio>
+            <el-radio v-for="p in priorityOptions" :key="p.value" :value="p.value">{{ p.label }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="问题描述">
@@ -191,32 +124,44 @@ function handleSubmit() {
       </el-form>
     </div>
 
-    <div class="ticket-list">
-      <div v-if="tickets.length === 0" class="empty-state">
-        <div class="empty-icon">🎫</div>
-        <p class="empty-text">暂无工单记录</p>
-        <el-button type="primary" size="small" @click="showForm = true">提交工单</el-button>
-      </div>
-      <div v-for="item in tickets" :key="item.id" class="ticket-card">
+    <div v-if="loading" class="loading-state">
+      <el-skeleton :rows="3" animated />
+    </div>
+
+    <div v-else-if="tickets.length === 0" class="empty-state">
+      <div class="empty-icon">🎫</div>
+      <p class="empty-text">暂无工单记录</p>
+      <el-button type="primary" size="small" @click="showForm = true">提交工单</el-button>
+    </div>
+
+    <div v-else class="ticket-list">
+      <div v-for="ticket in tickets" :key="ticket.workOrderUuid" class="ticket-card">
         <div class="ticket-header">
-          <div class="ticket-info">
-            <span class="ticket-id">{{ item.id }}</span>
-            <h4 class="ticket-title">{{ item.title }}</h4>
+          <div class="ticket-left">
+            <el-tag :type="priorityTagType[ticket.priority]" size="small" class="ticket-priority">
+              {{ WorkOrderPriorityMap[ticket.priority as WorkOrderPriority] }}
+            </el-tag>
+            <h4 class="ticket-title">{{ ticket.title }}</h4>
           </div>
-          <span :class="['ticket-status', TicketStatusClass[item.status]]">
-            {{ TicketStatusText[item.status] }}
-          </span>
+          <el-tag :type="statusTagType[ticket.status]" size="small">
+            {{ WorkOrderStatusMap[ticket.status as WorkOrderStatus] }}
+          </el-tag>
         </div>
+
         <div class="ticket-meta">
-          <span class="meta-item"><span class="meta-label">优先级：</span>
-            <span :class="['priority-tag', TicketPriorityClass[item.priority]]">{{ TicketPriorityText[item.priority] }}</span>
-          </span>
-          <span class="meta-item"><span class="meta-label">提交日期：</span>{{ item.date }}</span>
-          <span class="meta-item"><span class="meta-label">处理人：</span>{{ item.handler }}</span>
+          <span>类型：{{ ticket.type }}</span>
+          <span>创建时间：{{ ticket.createdAt }}</span>
+          <span v-if="ticket.assignedStaffName">处理人：{{ ticket.assignedStaffName }}</span>
         </div>
-        <div v-if="item.remark" class="ticket-remark">
-          <span class="remark-label">处理备注：</span>
-          <p class="remark-content">{{ item.remark }}</p>
+
+        <div class="ticket-desc">
+          <span class="desc-label">问题描述：</span>
+          <p>{{ ticket.description }}</p>
+        </div>
+
+        <div v-if="ticket.resolution" class="ticket-resolution">
+          <span class="resolution-label">处理结果：</span>
+          <p>{{ ticket.resolution }}</p>
         </div>
       </div>
     </div>
@@ -261,8 +206,81 @@ function handleSubmit() {
 .ticket-card {
   background: #ffffff;
   border-radius: 12px;
-  padding: 24px;
+  padding: 20px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.ticket-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.ticket-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ticket-priority {
+  flex-shrink: 0;
+}
+
+.ticket-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.ticket-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.ticket-desc {
+  padding: 10px 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.desc-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.ticket-desc p {
+  font-size: 14px;
+  color: #374151;
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
+.ticket-resolution {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #ecfdf5;
+  border-radius: 8px;
+  border-left: 3px solid #10b981;
+}
+
+.resolution-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #10b981;
+}
+
+.ticket-resolution p {
+  font-size: 14px;
+  color: #374151;
+  margin: 4px 0 0;
+  line-height: 1.5;
 }
 
 .empty-state {
@@ -287,74 +305,10 @@ function handleSubmit() {
   margin: 0 0 20px;
 }
 
-.ticket-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 12px;
+.loading-state {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
-
-.ticket-id {
-  font-size: 12px;
-  color: #9ca3af;
-  font-family: monospace;
-}
-
-.ticket-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
-  margin: 4px 0 0;
-}
-
-.ticket-status {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 12px;
-  border-radius: 50px;
-  white-space: nowrap;
-}
-
-.status-done { background: #ecfdf5; color: #10b981; }
-.status-pending { background: #fef3c7; color: #d97706; }
-
-.ticket-meta {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-}
-
-.meta-label {
-  color: #9ca3af;
-}
-
-.priority-tag {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.pri-normal { background: #f3f4f6; color: #6b7280; }
-.pri-high { background: #fef3c7; color: #d97706; }
-.pri-urgent { background: #fef2f2; color: #dc2626; }
-
-.ticket-remark {
-  margin-top: 12px;
-  padding: 12px 16px;
-  background: #f9fafb;
-  border-radius: 8px;
-  border-left: 3px solid #3b82f6;
-}
-
-.remark-label { font-size: 13px; font-weight: 600; color: #3b82f6; }
-.remark-content { font-size: 14px; color: #374151; margin: 6px 0 0; line-height: 1.6; }
 </style>

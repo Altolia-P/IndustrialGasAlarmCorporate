@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { adminProducts } from '@/data/content'
+import { productApi } from '@/api/product'
+import type { ProductDetailVO } from '@/types/product'
+import { useLoading } from '@/composables/use-loading'
 
 const router = useRouter()
 const route = useRoute()
@@ -37,22 +39,33 @@ const fallbackProduct: ProductDetailData = {
   body: '<p>IS-200复合气体检测仪是公司自主研发的新一代便携式多气体检测设备。本产品采用模块化传感器设计，可根据用户需求灵活配置检测气体种类，最多可同时检测4种气体。</p><p>产品采用高强度工程塑料外壳，具备优异的抗冲击性能和防水防尘能力。2.4英寸高清彩色液晶屏，可同时显示四种气体的实时浓度值、报警状态、电池电量和工作状态。</p><p>内置大容量可充电锂电池，充满电后可连续工作10小时以上。支持USB充电和数据导出，可通过专用软件查看历史记录和趋势分析。</p>'
 }
 
-const product = computed<ProductDetailData>(() => {
+const product = ref<ProductDetailData>(fallbackProduct)
+const { loading, start, stop } = useLoading()
+
+async function fetchProduct() {
   const uuid = route.params.uuid as string
-  if (!uuid) return fallbackProduct
-
-  const found = adminProducts.find((p) => p.productUuid === uuid)
-  if (!found) return fallbackProduct
-
-  return {
-    name: found.name,
-    category: found.categoryName,
-    description: found.description,
-    image: found.coverImage || fallbackProduct.image,
-    features: [],
-    params: [],
-    body: (found as Record<string, unknown>).body as string || ''
+  if (!uuid) return
+  start()
+  try {
+    const detail = await productApi.getPublicDetail(uuid)
+    product.value = {
+      name: detail.name,
+      category: detail.categoryName,
+      description: detail.description,
+      image: detail.coverImage || fallbackProduct.image,
+      features: [],
+      params: [],
+      body: detail.body || ''
+    }
+  } catch {
+    product.value = fallbackProduct
+  } finally {
+    stop()
   }
+}
+
+onMounted(() => {
+  fetchProduct()
 })
 
 const relatedProducts = [

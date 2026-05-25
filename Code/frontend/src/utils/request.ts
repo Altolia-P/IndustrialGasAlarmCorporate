@@ -27,7 +27,7 @@ instance.interceptors.response.use(
     if (code === 4008) {
       removeToken()
       removeRole()
-      window.location.href = '/login'
+      window.location.href = '/login?reason=expired'
       return Promise.reject(new Error(message || '登录已过期，请重新登录'))
     }
 
@@ -37,7 +37,7 @@ instance.interceptors.response.use(
     if (error.response?.status === 401) {
       removeToken()
       removeRole()
-      window.location.href = '/login'
+      window.location.href = '/login?reason=unauthorized'
       return Promise.reject({ code: 4008, message: '登录已过期，请重新登录' })
     }
     if (error.code === 'ECONNABORTED') {

@@ -12,6 +12,8 @@ public class MessageVO {
     private String status;
     private String processor;
     private String remark;
+    private String assignedStaffUuid;
+    private String assignedStaffName;
     private String submittedAt;
     private String processedAt;
 }

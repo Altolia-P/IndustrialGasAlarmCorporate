@@ -14,6 +14,7 @@ import com.niit.industrialgasalarmcorporate.domain.event.EventBus;
 import com.niit.industrialgasalarmcorporate.domain.event.ProductPublishedEvent;
 import com.niit.industrialgasalarmcorporate.domain.product.Product;
 import com.niit.industrialgasalarmcorporate.domain.product.ProductRepository;
+import com.niit.industrialgasalarmcorporate.infrastructure.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final EventBus eventBus;
+    private final FileStorageService fileStorageService;
 
     @Override
     @Transactional
@@ -42,7 +44,12 @@ public class ProductServiceImpl implements ProductService {
     public ProductVO updateProduct(String productUuid, UpdateProductDTO dto) {
         Product product = productRepository.findById(productUuid)
                 .orElseThrow(() -> new ProductNotFoundException(productUuid));
+        String oldCoverImage = product.getCoverImage();
         ProductAssembler.updateEntity(product, dto);
+        if (dto.getCoverImage() != null && oldCoverImage != null
+                && !oldCoverImage.equals(dto.getCoverImage())) {
+            fileStorageService.delete(oldCoverImage);
+        }
         productRepository.save(product);
         return ProductAssembler.toVO(product);
     }
@@ -76,13 +83,8 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ProductVO> findPublicProducts(String categoryUuid, int page, int size) {
-        Page<Product> domainPage;
-        if (categoryUuid != null && !categoryUuid.isBlank()) {
-            domainPage = productRepository.findByCategory(categoryUuid, page, size);
-        } else {
-            domainPage = productRepository.findAll(page, size);
-        }
+    public Page<ProductVO> findPublicProducts(String categoryUuid, String name, int page, int size) {
+        Page<Product> domainPage = productRepository.findAllWithFilter(name, categoryUuid, "PUBLISHED", page, size);
         return new Page<>(
                 domainPage.getContent().stream().map(ProductAssembler::toVO).collect(Collectors.toList()),
                 domainPage.getTotalElements(),
@@ -108,6 +110,9 @@ public class ProductServiceImpl implements ProductService {
     public void deleteProduct(String productUuid) {
         Product product = productRepository.findById(productUuid)
                 .orElseThrow(() -> new ProductNotFoundException(productUuid));
+        if (product.getCoverImage() != null) {
+            fileStorageService.delete(product.getCoverImage());
+        }
         productRepository.deleteById(productUuid);
     }
 }

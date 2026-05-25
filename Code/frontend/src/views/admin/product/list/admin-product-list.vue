@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ProductStatus } from '@/types/product'
-import { adminProducts } from '@/data/content'
+import { productApi } from '@/api/product'
+import type { ProductVO } from '@/types/product'
+import { useLoading } from '@/composables/use-loading'
+import { usePagination } from '@/composables/use-pagination'
 
 const router = useRouter()
 
@@ -13,19 +16,34 @@ const statusMap: Record<string, { text: string; type: string }> = {
   [ProductStatus.UNPUBLISHED]: { text: '已下架', type: 'danger' }
 }
 
-const searchForm = ref({ name: '', status: '' })
-const currentPage = ref(1)
+const products = ref<ProductVO[]>([])
+const { loading, start, stop } = useLoading()
+const { state: pagination, backendPage, setTotal, goToPage } = usePagination()
 
-const filteredProducts = computed(() => {
-  let list = adminProducts
-  if (searchForm.value.name) {
-    const kw = searchForm.value.name.toLowerCase()
-    list = list.filter((p) => p.name.toLowerCase().includes(kw))
+const searchForm = ref({ name: '', status: '' })
+
+async function fetchProducts() {
+  start()
+  try {
+    const params: Record<string, unknown> = {
+      page: backendPage.value,
+      size: pagination.value.size
+    }
+    if (searchForm.value.name) params.name = searchForm.value.name
+    if (searchForm.value.status) params.status = searchForm.value.status
+    const page = await productApi.getAdminList(params)
+    products.value = page.content
+    setTotal(page.totalElements, page.totalPages)
+  } catch {
+    products.value = []
+    ElMessage.error('加载失败')
+  } finally {
+    stop()
   }
-  if (searchForm.value.status) {
-    list = list.filter((p) => p.status === searchForm.value.status)
-  }
-  return list
+}
+
+onMounted(() => {
+  fetchProducts()
 })
 
 function handleCreate() {
@@ -38,33 +56,46 @@ function handleEdit(uuid: string) {
 
 async function handleDelete(uuid: string) {
   await ElMessageBox.confirm('确认删除该产品？', '删除确认', { type: 'warning' })
-  const idx = adminProducts.findIndex((p) => p.productUuid === uuid)
-  if (idx !== -1) adminProducts.splice(idx, 1)
-  ElMessage.success('删除成功')
-}
-
-function handlePublish(uuid: string) {
-  const p = adminProducts.find((p) => p.productUuid === uuid)
-  if (p) {
-    p.status = ProductStatus.PUBLISHED
-    ElMessage.success('上架成功')
+  try {
+    await productApi.remove(uuid)
+    ElMessage.success('删除成功')
+    await fetchProducts()
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    ElMessage.error(err.message || '删除失败')
   }
 }
 
-function handleUnpublish(uuid: string) {
-  const p = adminProducts.find((p) => p.productUuid === uuid)
-  if (p) {
-    p.status = ProductStatus.UNPUBLISHED
+async function handlePublish(uuid: string) {
+  try {
+    await productApi.publish(uuid)
+    ElMessage.success('上架成功')
+    await fetchProducts()
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    ElMessage.error(err.message || '上架失败')
+  }
+}
+
+async function handleUnpublish(uuid: string) {
+  try {
+    await productApi.unpublish(uuid)
     ElMessage.success('下架成功')
+    await fetchProducts()
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    ElMessage.error(err.message || '下架失败')
   }
 }
 
 function handleSearch() {
-  currentPage.value = 1
+  goToPage(1)
+  fetchProducts()
 }
 
 function handlePageChange(page: number) {
-  currentPage.value = page
+  goToPage(page)
+  fetchProducts()
 }
 </script>
 
@@ -83,8 +114,16 @@ function handlePageChange(page: number) {
       <el-button type="primary" @click="handleCreate">新增产品</el-button>
     </div>
 
-    <div class="table-wrapper">
-      <el-table :data="filteredProducts" stripe style="width:100%">
+    <div v-if="loading" class="loading-state">
+      <el-skeleton :rows="5" animated />
+    </div>
+
+    <div v-else-if="products.length === 0" class="empty-state">
+      <p>暂无产品</p>
+    </div>
+
+    <div v-else class="table-wrapper">
+      <el-table :data="products" stripe style="width:100%">
         <el-table-column prop="name" label="产品名称" min-width="200" />
         <el-table-column prop="categoryName" label="分类" width="120" />
         <el-table-column label="状态" width="100">
@@ -108,9 +147,9 @@ function handlePageChange(page: number) {
 
     <div class="pagination-bar">
       <el-pagination
-        v-model:current-page="currentPage"
-        :total="filteredProducts.length"
-        :page-size="20"
+        v-model:current-page="pagination.page"
+        :total="pagination.totalElements"
+        :page-size="pagination.size"
         layout="total, prev, pager, next"
         @current-change="handlePageChange"
       />
@@ -151,5 +190,24 @@ function handlePageChange(page: number) {
 .pagination-bar {
   display: flex;
   justify-content: flex-end;
+}
+
+.loading-state {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 40px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  color: #9ca3af;
+  font-size: 15px;
 }
 </style>

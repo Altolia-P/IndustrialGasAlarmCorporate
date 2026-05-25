@@ -94,6 +94,20 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
+    public List<Product> searchByKeyword(String keyword, int limit) {
+        LambdaQueryWrapper<ProductPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.and(w -> w.like(ProductPO::getName, keyword).or().like(ProductPO::getDescription, keyword))
+                .eq(ProductPO::getStatus, ProductStatus.PUBLISHED.name())
+                .orderByDesc(ProductPO::getCreatedAt)
+                .last("LIMIT " + limit);
+        List<ProductPO> poList = productMapper.selectList(wrapper);
+        return poList.stream()
+                .map(po -> toDomain(po, findImagesByProductUuid(po.getProductUuid()),
+                        findAttributesByProductUuid(po.getProductUuid())))
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Page<Product> findAllWithFilter(String name, String categoryUuid, String status, int page, int size) {
         LambdaQueryWrapper<ProductPO> wrapper = new LambdaQueryWrapper<>();
         if (name != null && !name.isBlank()) {

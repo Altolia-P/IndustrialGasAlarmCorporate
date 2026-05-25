@@ -4,7 +4,6 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ContentType, ContentStatus } from '@/types/content'
 import { contentApi } from '@/api/content'
-import { contents as sharedContents } from '@/data/content'
 
 const router = useRouter()
 const route = useRoute()
@@ -27,26 +26,6 @@ const categories = ref([
 
 const submitting = ref(false)
 
-function generateContentUuid(): string {
-  const today = new Date()
-  const dateStr =
-    today.getFullYear().toString() +
-    String(today.getMonth() + 1).padStart(2, '0') +
-    String(today.getDate()).padStart(2, '0') +
-    String(today.getHours()).padStart(2, '0') +
-    String(today.getMinutes()).padStart(2, '0') +
-    String(today.getSeconds()).padStart(2, '0')
-  return `C-${dateStr}`
-}
-
-function formatNow(): string {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
 async function handleSubmit() {
   if (!form.title || !form.categoryUuid) {
     ElMessage.warning('请填写标题和分类')
@@ -63,26 +42,8 @@ async function handleSubmit() {
     if (form.coverImage) fd.append('coverImage', form.coverImage)
     if (isEdit.value) {
       await contentApi.update(route.params.uuid as string, fd)
-      const existing = sharedContents.find((c) => c.contentUuid === route.params.uuid)
-      if (existing) {
-        existing.title = form.title
-        existing.status = form.status
-        existing.body = form.body
-      }
     } else {
       await contentApi.create(fd)
-      sharedContents.push({
-        contentUuid: generateContentUuid(),
-        title: form.title,
-        type: form.type,
-        categoryUuid: form.categoryUuid,
-        categoryName: categories.value.find((c) => c.categoryUuid === form.categoryUuid)?.name ?? '',
-        coverImage: '',
-        status: form.status,
-        createdAt: formatNow(),
-        body: form.body,
-        summary: form.body.slice(0, 100) || form.title
-      })
     }
     ElMessage.success(isEdit.value ? '保存成功' : '创建成功')
     router.push('/admin/contents')

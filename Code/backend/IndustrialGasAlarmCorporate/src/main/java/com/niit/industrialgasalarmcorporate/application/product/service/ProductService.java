@@ -18,7 +18,7 @@ public interface ProductService {
 
     ProductDetailVO getProduct(String productUuid);
 
-    Page<ProductVO> findPublicProducts(String categoryUuid, int page, int size);
+    Page<ProductVO> findPublicProducts(String categoryUuid, String name, int page, int size);
 
     Page<ProductVO> findAdminProducts(String name, String categoryUuid, String status, int page, int size);
 

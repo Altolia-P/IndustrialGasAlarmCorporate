@@ -55,6 +55,13 @@ public class Content {
         this.status = ContentStatus.PUBLISHED;
     }
 
+    public void unpublish() {
+        if (this.status != ContentStatus.PUBLISHED) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "仅已发布的内容可以取消发布");
+        }
+        this.status = ContentStatus.DRAFT;
+    }
+
     public void update(String title, String summary, String body, String coverImage,
                        String categoryUuid) {
         this.title = title;

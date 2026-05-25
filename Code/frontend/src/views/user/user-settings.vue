@@ -1,16 +1,17 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
+import { authApi } from '@/api/auth'
 
 const authStore = useAuthStore()
 
-const passwordForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
+const passwordForm = reactive({ newPassword: '', confirmPassword: '' })
 const changingPwd = ref(false)
 
-function changePassword() {
-  if (!passwordForm.oldPassword || !passwordForm.newPassword) {
-    ElMessage.warning('请填写完整密码信息')
+async function changePassword() {
+  if (!passwordForm.newPassword) {
+    ElMessage.warning('请输入新密码')
     return
   }
   if (passwordForm.newPassword !== passwordForm.confirmPassword) {
@@ -22,27 +23,53 @@ function changePassword() {
     return
   }
   changingPwd.value = true
-  setTimeout(() => {
-    changingPwd.value = false
-    passwordForm.oldPassword = ''
+  try {
+    await authApi.resetPassword({ username: authStore.username, newPassword: passwordForm.newPassword })
     passwordForm.newPassword = ''
     passwordForm.confirmPassword = ''
     ElMessage.success('密码修改成功，请重新登录')
     authStore.logout()
-  }, 800)
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    ElMessage.error(err.message || '密码修改失败')
+  } finally {
+    changingPwd.value = false
+  }
 }
 
-const notifications = reactive([
+const NOTIFY_KEY = 'user-notify-settings'
+const defaultNotifications = [
   { type: '工单更新', enabled: true },
   { type: '咨询回复', enabled: true },
   { type: '产品更新', enabled: false },
   { type: '系统公告', enabled: true }
-])
+]
+
+const notifications = reactive(defaultNotifications.map((n, i) => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(NOTIFY_KEY) || '[]')
+    return saved[i] || n
+  } catch {
+    return n
+  }
+}))
 
 function toggleNotification(index: number) {
   notifications[index].enabled = !notifications[index].enabled
+  localStorage.setItem(NOTIFY_KEY, JSON.stringify(notifications))
   ElMessage.success('通知设置已更新')
 }
+
+onMounted(() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(NOTIFY_KEY) || '[]')
+    if (saved.length > 0) {
+      saved.forEach((s: typeof defaultNotifications[0], i: number) => {
+        if (notifications[i]) notifications[i].enabled = s.enabled
+      })
+    }
+  } catch { /* use defaults */ }
+})
 </script>
 
 <template>
@@ -53,9 +80,6 @@ function toggleNotification(index: number) {
     <div class="form-card">
       <div class="card-section-title">修改密码</div>
       <el-form :model="passwordForm" label-width="100px">
-        <el-form-item label="当前密码">
-          <el-input v-model="passwordForm.oldPassword" type="password" show-password placeholder="请输入当前密码" />
-        </el-form-item>
         <el-form-item label="新密码">
           <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="至少6位字符" />
         </el-form-item>

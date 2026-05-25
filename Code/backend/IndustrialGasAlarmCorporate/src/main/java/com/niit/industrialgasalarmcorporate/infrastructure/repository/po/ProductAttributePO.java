@@ -11,14 +11,16 @@ import java.time.LocalDateTime;
 @TableName("t_product_attribute")
 public class ProductAttributePO {
 
-    @TableId(type = IdType.AUTO)
-    private Long attrId;
+    @TableId
+    private String attrId;
 
     private String productUuid;
 
     private String attrKey;
 
     private String attrVal;
+
+    private Integer version;
 
     @TableLogic
     private Integer deleted;

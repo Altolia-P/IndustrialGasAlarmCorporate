@@ -13,6 +13,8 @@ public class ContactMessage {
     private MessageStatus status;
     private String processor;
     private String remark;
+    private String assignedStaffUuid;
+    private String assignedStaffName;
     private final LocalDateTime submittedAt;
     private LocalDateTime processedAt;
 
@@ -28,6 +30,7 @@ public class ContactMessage {
 
     public ContactMessage(String messageUuid, String name, String phone, String content,
                           String ip, MessageStatus status, String processor, String remark,
+                          String assignedStaffUuid, String assignedStaffName,
                           LocalDateTime submittedAt, LocalDateTime processedAt) {
         this.messageUuid = messageUuid;
         this.name = name;
@@ -37,8 +40,16 @@ public class ContactMessage {
         this.status = status;
         this.processor = processor;
         this.remark = remark;
+        this.assignedStaffUuid = assignedStaffUuid;
+        this.assignedStaffName = assignedStaffName;
         this.submittedAt = submittedAt;
         this.processedAt = processedAt;
+    }
+
+    public void assign(String staffUuid, String staffName) {
+        this.assignedStaffUuid = staffUuid;
+        this.assignedStaffName = staffName;
+        this.status = MessageStatus.IN_PROGRESS;
     }
 
     public void markProcessed(String processor, String remark) {
@@ -78,6 +89,14 @@ public class ContactMessage {
 
     public String getRemark() {
         return remark;
+    }
+
+    public String getAssignedStaffUuid() {
+        return assignedStaffUuid;
+    }
+
+    public String getAssignedStaffName() {
+        return assignedStaffName;
     }
 
     public LocalDateTime getSubmittedAt() {

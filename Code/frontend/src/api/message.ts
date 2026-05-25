@@ -18,10 +18,16 @@ export const messageApi = {
   assign(uuid: string, dto: AssignMessageDTO): Promise<null> {
     return request.put(`/admin/messages/${uuid}/assign`, dto)
   },
-  complete(uuid: string, dto: CompleteMessageDTO): Promise<null> {
-    return request.put(`/admin/messages/${uuid}/complete`, dto)
+  process(uuid: string, dto: CompleteMessageDTO): Promise<null> {
+    return request.put(`/admin/messages/${uuid}/process`, dto)
   },
   processBatch(uuids: string[], remark: string): Promise<null> {
     return request.put('/admin/messages/process/batch', { uuids, remark })
+  },
+  getUserMessages(params: { page?: number; size?: number }): Promise<Page<MessageVO>> {
+    return request.get('/user/messages', { params })
+  },
+  getStaffInquiries(params: { page?: number; size?: number }): Promise<Page<MessageVO>> {
+    return request.get('/staff/inquiries', { params })
   }
 }

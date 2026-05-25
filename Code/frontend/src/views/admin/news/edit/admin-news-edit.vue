@@ -4,7 +4,6 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ContentType, ContentStatus, ContentStatusMap } from '@/types/content'
 import { contentApi } from '@/api/content'
-import { contents as sharedContents } from '@/data/content'
 
 const router = useRouter()
 const route = useRoute()
@@ -26,26 +25,6 @@ const categories = ref([
 ])
 
 const submitting = ref(false)
-
-function generateContentUuid(): string {
-  const today = new Date()
-  const dateStr =
-    today.getFullYear().toString() +
-    String(today.getMonth() + 1).padStart(2, '0') +
-    String(today.getDate()).padStart(2, '0') +
-    String(today.getHours()).padStart(2, '0') +
-    String(today.getMinutes()).padStart(2, '0') +
-    String(today.getSeconds()).padStart(2, '0')
-  return `N-${dateStr}`
-}
-
-function formatNow(): string {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
 
 async function handleSubmit() {
   if (!form.title) {
@@ -71,27 +50,8 @@ async function handleSubmit() {
     if (form.coverImage) fd.append('coverImage', form.coverImage)
     if (isEdit.value) {
       await contentApi.update(route.params.uuid as string, fd)
-      const existing = sharedContents.find((c) => c.contentUuid === route.params.uuid)
-      if (existing) {
-        existing.title = form.title
-        existing.categoryName = form.categoryName
-        existing.body = form.body
-        existing.status = form.status
-      }
     } else {
       await contentApi.create(fd)
-      sharedContents.push({
-        contentUuid: generateContentUuid(),
-        title: form.title,
-        summary: form.body.slice(0, 100),
-        coverImage: '',
-        type: ContentType.NEWS,
-        categoryUuid: '',
-        categoryName: form.categoryName,
-        status: form.status,
-        createdAt: formatNow(),
-        body: form.body
-      })
     }
     ElMessage.success(isEdit.value ? '保存成功' : '创建成功')
     router.push('/admin/news')

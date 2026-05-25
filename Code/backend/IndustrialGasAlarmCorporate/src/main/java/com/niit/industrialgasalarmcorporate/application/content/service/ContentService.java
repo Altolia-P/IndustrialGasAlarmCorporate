@@ -14,6 +14,8 @@ public interface ContentService {
 
     void publishContent(String contentUuid);
 
+    void unpublishContent(String contentUuid);
+
     ContentDetailVO getContent(String contentUuid);
 
     Page<ContentVO> findPublicContents(String type, String categoryUuid, int page, int size);

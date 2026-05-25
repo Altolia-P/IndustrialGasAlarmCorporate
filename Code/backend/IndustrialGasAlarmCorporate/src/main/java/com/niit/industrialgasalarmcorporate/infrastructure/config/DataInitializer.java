@@ -63,11 +63,12 @@ public class DataInitializer implements CommandLineRunner {
 
         jdbcTemplate.execute("""
                 CREATE TABLE IF NOT EXISTS t_product_image (
-                    image_id     BIGINT       AUTO_INCREMENT PRIMARY KEY,
+                    image_id     CHAR(36)     PRIMARY KEY,
                     product_uuid CHAR(36)     NOT NULL,
                     url          VARCHAR(500) NOT NULL,
                     alt_text     VARCHAR(200) NULL,
                     sort_order   INT          NOT NULL DEFAULT 0,
+                    version      INT          NOT NULL DEFAULT 0,
                     deleted      TINYINT(1)   NOT NULL DEFAULT 0,
                     created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -76,10 +77,11 @@ public class DataInitializer implements CommandLineRunner {
 
         jdbcTemplate.execute("""
                 CREATE TABLE IF NOT EXISTS t_product_attribute (
-                    attr_id      BIGINT       AUTO_INCREMENT PRIMARY KEY,
+                    attr_id      CHAR(36)     PRIMARY KEY,
                     product_uuid CHAR(36)     NOT NULL,
                     attr_key     VARCHAR(100) NOT NULL,
-                    attr_val     VARCHAR(500) NULL,
+                    attr_val     VARCHAR(500) NOT NULL,
+                    version      INT          NOT NULL DEFAULT 0,
                     deleted      TINYINT(1)   NOT NULL DEFAULT 0,
                     created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -118,24 +120,61 @@ public class DataInitializer implements CommandLineRunner {
 
         jdbcTemplate.execute("""
                 CREATE TABLE IF NOT EXISTS t_contact_message (
-                    message_uuid CHAR(36)     PRIMARY KEY,
-                    name         VARCHAR(50)  NOT NULL,
-                    phone        VARCHAR(20)  NOT NULL,
-                    content      TEXT         NOT NULL,
-                    ip           VARCHAR(45)  NULL,
-                    status       VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
-                    processor    VARCHAR(50)  NULL,
-                    remark       VARCHAR(500) NULL,
-                    submitted_at DATETIME     NULL,
-                    processed_at DATETIME     NULL,
-                    version      INT          NOT NULL DEFAULT 0,
-                    deleted      TINYINT(1)   NOT NULL DEFAULT 0,
-                    created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                    message_uuid        CHAR(36)     PRIMARY KEY,
+                    name                VARCHAR(100) NOT NULL,
+                    phone               VARCHAR(20)  NOT NULL,
+                    content             TEXT         NOT NULL,
+                    ip                  VARCHAR(45)  NOT NULL,
+                    status              VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
+                    assigned_staff_uuid CHAR(36)     NULL,
+                    assigned_staff_name VARCHAR(100) NULL,
+                    processor           VARCHAR(50)  NULL,
+                    remark              VARCHAR(500) NULL,
+                    submitted_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    processed_at        DATETIME     NULL,
+                    version             INT          NOT NULL DEFAULT 0,
+                    deleted             TINYINT(1)   NOT NULL DEFAULT 0,
+                    created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """);
 
-        log.info("数据库表初始化完成 (7 tables)");
+        jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS t_staff (
+                    staff_uuid  CHAR(36)     PRIMARY KEY,
+                    name        VARCHAR(50)  NOT NULL,
+                    phone       VARCHAR(20)  NOT NULL,
+                    email       VARCHAR(100) NULL,
+                    role        VARCHAR(30)  NOT NULL,
+                    status      VARCHAR(20)  NOT NULL DEFAULT 'STANDBY',
+                    deleted     TINYINT(1)   NOT NULL DEFAULT 0,
+                    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                """);
+
+        jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS t_work_order (
+                    work_order_uuid       CHAR(36)     PRIMARY KEY,
+                    title                 VARCHAR(200) NOT NULL,
+                    type                  VARCHAR(30)  NOT NULL DEFAULT 'TECH_SUPPORT',
+                    description           TEXT         NULL,
+                    status                VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
+                    priority              VARCHAR(20)  NOT NULL DEFAULT 'MEDIUM',
+                    assigned_staff_uuid   CHAR(36)     NULL,
+                    assigned_staff_name   VARCHAR(50)  NULL,
+                    customer_name         VARCHAR(50)  NULL,
+                    customer_phone        VARCHAR(20)  NULL,
+                    resolution            VARCHAR(500) NULL,
+                    completed_at          DATETIME     NULL,
+                    version               INT          NOT NULL DEFAULT 0,
+                    deleted               TINYINT(1)   NOT NULL DEFAULT 0,
+                    created_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at            DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                """);
+
+        log.info("数据库表初始化完成 (9 tables)");
     }
 
     private void ensureAdminUser() {

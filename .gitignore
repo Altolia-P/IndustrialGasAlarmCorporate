@@ -1,23 +1,47 @@
-/target/
+# ── 构建产物 ──
+target/
 node_modules/
-.idea/
-*.iml
 dist/
+*.iml
+
+# ── IDE 配置 ──
+.idea/
+**/.trae/
+**/.vscode/
+
+# ── 环境变量（含密钥，禁止入库） ──
+.env
 .env.local
 .env.*.local
+.env.production
+.env.staging
 
-# 设计文档
+# ── Claude Code 本地配置 ──
+.claude/settings.local.json
+**/.claude/settings.local.json
+.claude/worktrees/
+.claude/work-log.md
+
+# ── gstack 浏览器工具产物 ──
+**/.gstack/
+
+# ── 设计文档 ──
 Doc/
 
-# 根目录规则文件
+# ── 个人工作日志 ──
+work-log.md
+**/工作日志.md
+
+# ── 根目录规则文件 ──
 backend_rules*.md
 frontend_rules*.md
 project_rules*.md
 项目后端起始依赖.md
 
-# 本地配置
-.claude/settings.local.json
+# ── 临时/演示数据 ──
+**/demo-data.sql
+**/CHANGELOG.md
 
-# OS
+# ── OS ──
 Thumbs.db
 .DS_Store

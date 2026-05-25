@@ -85,4 +85,10 @@ public class AdminContentController {
         contentService.publishContent(uuid);
         return Result.ok("发布成功", null);
     }
+
+    @PostMapping("/contents/{uuid}/unpublish")
+    public Result<Void> unpublishContent(@PathVariable String uuid) {
+        contentService.unpublishContent(uuid);
+        return Result.ok("取消发布成功", null);
+    }
 }

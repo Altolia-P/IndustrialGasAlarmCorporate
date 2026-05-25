@@ -1,17 +1,37 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { solutions, type SolutionData } from '@/data/solutions'
-import { contents as sharedContents } from '@/data/content'
+import { contentApi } from '@/api/content'
 import { ContentType, ContentStatus } from '@/types/content'
+import type { ContentVO } from '@/types/content'
+import { useLoading } from '@/composables/use-loading'
 
 const router = useRouter()
 
-const activeId = ref(solutions[0].id)
+const contentSolutions = ref<ContentVO[]>([])
+const { loading, start, stop } = useLoading()
+
+async function fetchSolutions() {
+  start()
+  try {
+    const page = await contentApi.getPublicList({ type: ContentType.SOLUTION, size: 100 })
+    contentSolutions.value = page.content.filter((c) => c.status === ContentStatus.PUBLISHED)
+  } catch {
+    contentSolutions.value = []
+  } finally {
+    stop()
+  }
+}
+
+onMounted(() => {
+  fetchSolutions()
+})
+
+const activeId = ref(solutions.length > 0 ? solutions[0].id : '')
 
 const allSolutions = computed<SolutionData[]>(() => {
-  const published = sharedContents
-    .filter((c) => c.type === ContentType.SOLUTION && c.status === ContentStatus.PUBLISHED)
+  const published = contentSolutions.value
     .map((c) => ({
       id: c.contentUuid,
       name: c.title,

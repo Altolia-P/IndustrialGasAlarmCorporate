@@ -160,13 +160,13 @@ const router = createRouter({
           path: 'inquiries',
           name: 'StaffInquiries',
           meta: { title: '我的咨询', requiresAuth: true, requiresStaff: true },
-          component: () => import('@/views/staff/staff-inquiries.vue')
+          component: () => import('@/views/staff/inquiries/staff-inquiries.vue')
         },
         {
           path: 'settings',
           name: 'StaffSettings',
           meta: { title: '账户设置', requiresAuth: true, requiresStaff: true },
-          component: () => import('@/views/staff/staff-settings.vue')
+          component: () => import('@/views/staff/settings/staff-settings.vue')
         }
       ]
     },
@@ -181,7 +181,7 @@ const router = createRouter({
           path: '',
           name: 'AdminDashboard',
           meta: { title: '首页概览', requiresAuth: true, requiresAdmin: true },
-          component: () => import('@/views/admin/dashboard/dashboard.vue')
+          component: () => import('@/views/admin/dashboard/admin-dashboard.vue')
         },
         {
           path: 'products',
@@ -218,6 +218,12 @@ const router = createRouter({
           name: 'AdminContentEdit',
           meta: { title: '编辑内容', requiresAuth: true, requiresAdmin: true },
           component: () => import('@/views/admin/content/edit/admin-content-edit.vue')
+        },
+        {
+          path: 'categories',
+          name: 'AdminCategories',
+          meta: { title: '分类管理', requiresAuth: true, requiresAdmin: true },
+          component: () => import('@/views/admin/category/list/admin-category-list.vue')
         },
         {
           path: 'messages',
@@ -288,22 +294,19 @@ router.beforeEach(async (to, _from, next) => {
   const token = getToken()
   const role = getRole()
   const isLoginPage = to.name === 'Login'
+  const authStore = useAuthStore()
 
-  // Non-admin users cannot access admin-only pages
   if (to.meta.requiresAdmin && role !== 'ADMIN') {
     next(token ? { name: 'Home' } : { name: 'Login' })
     return
   }
 
-  // Non-staff users cannot access staff-only pages
   if (to.meta.requiresStaff && role !== 'STAFF') {
     next(token ? { name: 'Home' } : { name: 'Login' })
     return
   }
 
-  // Protected pages: verify token validity with backend before allowing access
   if (to.meta.requiresAuth && token) {
-    const authStore = useAuthStore()
     if (!authStore.tokenVerified) {
       const valid = await authStore.verifyToken()
       if (!valid) {
@@ -315,15 +318,12 @@ router.beforeEach(async (to, _from, next) => {
     return
   }
 
-  // Protected pages without token → login
   if (to.meta.requiresAuth && !token) {
     next({ name: 'Login', query: { redirect: to.fullPath } })
     return
   }
 
-  // Already logged in, visiting login page → redirect to own area
   if (isLoginPage && token) {
-    const authStore = useAuthStore()
     if (!authStore.tokenVerified) {
       const valid = await authStore.verifyToken()
       if (!valid) {
@@ -337,9 +337,7 @@ router.beforeEach(async (to, _from, next) => {
     return
   }
 
-  // Public page with stored token: silently verify to sync login state across tabs
   if (token && !isLoginPage) {
-    const authStore = useAuthStore()
     if (!authStore.tokenVerified) {
       await authStore.verifyToken()
     }

@@ -13,6 +13,8 @@ public enum ErrorCode {
     INVALID_PASSWORD(4007, "密码错误"),
     UNAUTHORIZED(4008, "未登录"),
     FORBIDDEN(4009, "无权限"),
+    STAFF_NOT_FOUND(4010, "员工不存在"),
+    WORK_ORDER_NOT_FOUND(4011, "工单不存在"),
     SYSTEM_ERROR(5001, "系统内部错误");
 
     private final int code;

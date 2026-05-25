@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import type { LoginDTO, LoginWithCaptchaDTO, RegisterDTO, LoginResultVO, CaptchaVO, UserVO } from '@/types/auth'
+import type { LoginDTO, LoginWithCaptchaDTO, RegisterDTO, ResetPasswordDTO, LoginResultVO, CaptchaVO, UserVO } from '@/types/auth'
 
 export const authApi = {
   login(dto: LoginDTO): Promise<LoginResultVO> {
@@ -16,5 +16,11 @@ export const authApi = {
   },
   getCurrentUser(): Promise<UserVO> {
     return request.get('/admin/currentUser')
+  },
+  logout(): Promise<null> {
+    return request.post('/admin/logout')
+  },
+  resetPassword(dto: ResetPasswordDTO): Promise<null> {
+    return request.post('/admin/resetPassword', dto)
   }
 }

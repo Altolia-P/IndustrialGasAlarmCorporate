@@ -2,20 +2,33 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { workOrders } from '@/data/workorder'
+import { workOrderApi } from '@/api/workorder'
 import { WorkOrderType, WorkOrderTypeMap, WorkOrderStatus, WorkOrderStatusMap, WorkOrderPriority, WorkOrderPriorityMap } from '@/types/workorder'
 import type { WorkOrderVO } from '@/types/workorder'
+import { useLoading } from '@/composables/use-loading'
 
 const router = useRouter()
 const route = useRoute()
 
 const task = ref<WorkOrderVO | null>(null)
 const resolution = ref('')
-const submitting = ref(false)
+const { loading: submitting, start: startSubmit, stop: stopSubmit } = useLoading()
+const { loading, start, stop } = useLoading()
+
+async function fetchTask() {
+  start()
+  try {
+    const uuid = route.params.uuid as string
+    task.value = await workOrderApi.getByUuid(uuid)
+  } catch {
+    task.value = null
+  } finally {
+    stop()
+  }
+}
 
 onMounted(() => {
-  const uuid = route.params.uuid as string
-  task.value = workOrders.find((w) => w.workOrderUuid === uuid) || null
+  fetchTask()
 })
 
 async function handleComplete() {
@@ -24,16 +37,17 @@ async function handleComplete() {
     return
   }
   if (!task.value) return
-  submitting.value = true
+  startSubmit()
   try {
-    task.value.resolution = resolution.value
-    task.value.status = WorkOrderStatus.COMPLETED
-    task.value.updatedAt = new Date().toLocaleString()
+    await workOrderApi.complete(task.value.workOrderUuid, resolution.value)
     ElMessage.success('工单已完成')
-  } catch {
-    ElMessage.error('操作失败')
+    task.value.status = WorkOrderStatus.COMPLETED
+    task.value.resolution = resolution.value
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    ElMessage.error(err.message || '操作失败')
   } finally {
-    submitting.value = false
+    stopSubmit()
   }
 }
 

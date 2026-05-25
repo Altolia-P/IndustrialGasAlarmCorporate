@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { StaffRoleMap } from '@/types/staff'
 import { MessageStatus, MessageStatusMap } from '@/types/message'
-import { messages, staffList, assignStaffToMessage } from '@/data/workorder'
+import { messageApi } from '@/api/message'
+import { staffApi } from '@/api/staff'
+import type { MessageVO } from '@/types/message'
+import type { StaffVO } from '@/types/staff'
+import { useLoading } from '@/composables/use-loading'
+import { usePagination } from '@/composables/use-pagination'
 
 const statusTagType: Record<string, string> = {
   [MessageStatus.PENDING]: 'warning',
@@ -11,9 +16,12 @@ const statusTagType: Record<string, string> = {
   [MessageStatus.PROCESSED]: 'success'
 }
 
+const messages = ref<MessageVO[]>([])
+const staffList = ref<StaffVO[]>([])
+const { loading, start, stop } = useLoading()
+const { state: pagination, backendPage, setTotal, goToPage } = usePagination()
+
 const searchForm = ref({ name: '', status: '' })
-const currentPage = ref(1)
-const total = ref(messages.length)
 
 const assignDialogVisible = ref(false)
 const assignStaffUuid = ref('')
@@ -22,22 +30,62 @@ const currentUuid = ref('')
 const completeDialogVisible = ref(false)
 const currentRemark = ref('')
 
+async function fetchMessages() {
+  start()
+  try {
+    const params: Record<string, unknown> = {
+      page: backendPage.value,
+      size: pagination.value.size
+    }
+    if (searchForm.value.name) params.name = searchForm.value.name
+    if (searchForm.value.status) params.status = searchForm.value.status
+    const page = await messageApi.getAdminList(params as Parameters<typeof messageApi.getAdminList>[0])
+    messages.value = page.content
+    setTotal(page.totalElements, page.totalPages)
+  } catch {
+    messages.value = []
+    ElMessage.error('加载失败')
+  } finally {
+    stop()
+  }
+}
+
+async function fetchStaffList() {
+  try {
+    const page = await staffApi.getAdminList({ size: 100 })
+    staffList.value = page.content
+  } catch {
+    staffList.value = []
+  }
+}
+
+onMounted(() => {
+  fetchMessages()
+  fetchStaffList()
+})
+
 function openAssign(uuid: string) {
   currentUuid.value = uuid
   assignStaffUuid.value = ''
   assignDialogVisible.value = true
 }
 
-function handleAssign() {
+async function handleAssign() {
   if (!assignStaffUuid.value) {
     ElMessage.warning('请选择负责人')
     return
   }
-  const staff = staffList.find((s) => s.staffUuid === assignStaffUuid.value)
+  const staff = staffList.value.find((s) => s.staffUuid === assignStaffUuid.value)
   if (!staff) return
-  assignStaffToMessage(currentUuid.value, assignStaffUuid.value, staff.name)
-  assignDialogVisible.value = false
-  ElMessage.success(`已安排 ${staff.name} 处理该留言`)
+  try {
+    await messageApi.assign(currentUuid.value, { staffUuid: assignStaffUuid.value, staffName: staff.name })
+    assignDialogVisible.value = false
+    ElMessage.success(`已安排 ${staff.name} 处理该留言`)
+    await fetchMessages()
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    ElMessage.error(err.message || '安排失败')
+  }
 }
 
 function openComplete(uuid: string) {
@@ -46,26 +94,30 @@ function openComplete(uuid: string) {
   completeDialogVisible.value = true
 }
 
-function handleComplete() {
+async function handleComplete() {
   if (!currentRemark.value.trim()) {
     ElMessage.warning('请填写处理备注')
     return
   }
-  const msg = messages.find((m) => m.messageUuid === currentUuid.value)
-  if (msg) {
-    msg.status = MessageStatus.PROCESSED
-    msg.remark = currentRemark.value
+  try {
+    await messageApi.process(currentUuid.value, { remark: currentRemark.value })
+    completeDialogVisible.value = false
+    ElMessage.success('留言已处理完成')
+    await fetchMessages()
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    ElMessage.error(err.message || '操作失败')
   }
-  completeDialogVisible.value = false
-  ElMessage.success('留言已处理完成')
 }
 
 function handleSearch() {
-  currentPage.value = 1
+  goToPage(1)
+  fetchMessages()
 }
 
 function handlePageChange(page: number) {
-  currentPage.value = page
+  goToPage(page)
+  fetchMessages()
 }
 </script>
 
@@ -83,7 +135,15 @@ function handlePageChange(page: number) {
       </div>
     </div>
 
-    <div class="table-wrapper">
+    <div v-if="loading" class="loading-state">
+      <el-skeleton :rows="5" animated />
+    </div>
+
+    <div v-else-if="messages.length === 0" class="empty-state">
+      <p>暂无留言</p>
+    </div>
+
+    <div v-else class="table-wrapper">
       <el-table :data="messages" stripe style="width:100%">
         <el-table-column prop="name" label="姓名" width="100" />
         <el-table-column prop="phone" label="电话" width="130" />
@@ -113,9 +173,9 @@ function handlePageChange(page: number) {
 
     <div class="pagination-bar">
       <el-pagination
-        v-model:current-page="currentPage"
-        :total="total"
-        :page-size="20"
+        v-model:current-page="pagination.page"
+        :total="pagination.totalElements"
+        :page-size="pagination.size"
         layout="total, prev, pager, next"
         @current-change="handlePageChange"
       />
@@ -182,6 +242,25 @@ function handlePageChange(page: number) {
 .pagination-bar {
   display: flex;
   justify-content: flex-end;
+}
+
+.loading-state {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 40px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  color: #9ca3af;
+  font-size: 15px;
 }
 
 .processed-text {

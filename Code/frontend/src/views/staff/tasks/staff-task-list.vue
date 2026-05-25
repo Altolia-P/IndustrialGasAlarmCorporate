@@ -1,16 +1,31 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { workOrders } from '@/data/workorder'
+import { workOrderApi } from '@/api/workorder'
 import { WorkOrderStatus, WorkOrderStatusMap, WorkOrderPriority, WorkOrderPriorityMap } from '@/types/workorder'
+import type { WorkOrderVO } from '@/types/workorder'
+import { useLoading } from '@/composables/use-loading'
 
 const router = useRouter()
-const authStore = useAuthStore()
 
-const myTasks = computed(() =>
-  workOrders.filter((w) => w.assignedStaffUuid === authStore.userUuid)
-)
+const tasks = ref<WorkOrderVO[]>([])
+const { loading, start, stop } = useLoading()
+
+async function fetchTasks() {
+  start()
+  try {
+    const page = await workOrderApi.getMyTasks({ size: 100 })
+    tasks.value = page.content
+  } catch {
+    tasks.value = []
+  } finally {
+    stop()
+  }
+}
+
+onMounted(() => {
+  fetchTasks()
+})
 
 const statusTagType: Record<string, string> = {
   [WorkOrderStatus.PENDING]: 'warning',
@@ -38,13 +53,17 @@ function goDetail(uuid: string) {
       </div>
     </div>
 
-    <div v-if="myTasks.length === 0" class="empty-state">
+    <div v-if="loading" class="loading-state">
+      <el-skeleton :rows="5" animated />
+    </div>
+
+    <div v-else-if="tasks.length === 0" class="empty-state">
       <div class="empty-icon">📋</div>
       <p class="empty-text">暂无待处理工单任务</p>
     </div>
 
     <div v-else class="task-list">
-      <div v-for="task in myTasks" :key="task.workOrderUuid" class="task-card" @click="goDetail(task.workOrderUuid)">
+      <div v-for="task in tasks" :key="task.workOrderUuid" class="task-card" @click="goDetail(task.workOrderUuid)">
         <div class="task-header">
           <div class="task-left">
             <el-tag :type="priorityTagType[task.priority]" size="small" class="task-priority">
@@ -106,6 +125,13 @@ function goDetail(uuid: string) {
 
 .empty-icon { font-size: 48px; margin-bottom: 16px; }
 .empty-text { font-size: 15px; color: #9ca3af; margin: 0; }
+
+.loading-state {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 40px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
 
 .task-list { display: flex; flex-direction: column; gap: 16px; }
 

@@ -1,21 +1,38 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { workOrders } from '@/data/workorder'
+import { workOrderApi } from '@/api/workorder'
 import { WorkOrderStatus, WorkOrderStatusMap } from '@/types/workorder'
+import type { WorkOrderVO } from '@/types/workorder'
+import { useLoading } from '@/composables/use-loading'
 
 const authStore = useAuthStore()
 const router = useRouter()
 
-const myTasks = computed(() =>
-  workOrders.filter((w) => w.assignedStaffUuid === authStore.userUuid)
-)
+const tasks = ref<WorkOrderVO[]>([])
+const { loading, start, stop } = useLoading()
+
+async function fetchTasks() {
+  start()
+  try {
+    const page = await workOrderApi.getMyTasks({ size: 100 })
+    tasks.value = page.content
+  } catch {
+    tasks.value = []
+  } finally {
+    stop()
+  }
+}
+
+onMounted(() => {
+  fetchTasks()
+})
 
 const stats = computed(() => ({
-  total: myTasks.value.length,
-  inProgress: myTasks.value.filter((w) => w.status === WorkOrderStatus.IN_PROGRESS).length,
-  completed: myTasks.value.filter((w) => w.status === WorkOrderStatus.COMPLETED).length
+  total: tasks.value.length,
+  inProgress: tasks.value.filter((w) => w.status === WorkOrderStatus.IN_PROGRESS).length,
+  completed: tasks.value.filter((w) => w.status === WorkOrderStatus.COMPLETED).length
 }))
 </script>
 

@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
 @TableName("t_product_image")
 public class ProductImagePO {
 
-    @TableId(type = IdType.AUTO)
-    private Long imageId;
+    @TableId
+    private String imageId;
 
     private String productUuid;
 
@@ -21,6 +21,8 @@ public class ProductImagePO {
     private String altText;
 
     private Integer sortOrder;
+
+    private Integer version;
 
     @TableLogic
     private Integer deleted;

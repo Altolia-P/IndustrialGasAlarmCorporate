@@ -28,6 +28,10 @@ public class ContactMessagePO {
 
     private String remark;
 
+    private String assignedStaffUuid;
+
+    private String assignedStaffName;
+
     private LocalDateTime submittedAt;
 
     private LocalDateTime processedAt;

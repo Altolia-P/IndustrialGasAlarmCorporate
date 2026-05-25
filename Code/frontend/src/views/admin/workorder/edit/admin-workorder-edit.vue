@@ -4,10 +4,11 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { WorkOrderType, WorkOrderTypeMap, WorkOrderStatus, WorkOrderStatusMap, WorkOrderPriority, WorkOrderPriorityMap } from '@/types/workorder'
 import { StaffRole, StaffRoleMap, StaffStatus } from '@/types/staff'
-import { workOrders, staffList } from '@/data/workorder'
 import { workOrderApi } from '@/api/workorder'
+import { staffApi } from '@/api/staff'
 import type { StaffVO } from '@/types/staff'
 import type { WorkOrderVO } from '@/types/workorder'
+import { useLoading } from '@/composables/use-loading'
 
 const router = useRouter()
 const route = useRoute()
@@ -41,7 +42,51 @@ const form = reactive<WorkOrderForm>({
   resolution: ''
 })
 
-const submitting = ref(false)
+const staffList = ref<StaffVO[]>([])
+const { loading: submitting, start: startSubmit, stop: stopSubmit } = useLoading()
+const { loading: pageLoading, start: startPage, stop: stopPage } = useLoading()
+
+async function fetchStaffList() {
+  try {
+    const page = await staffApi.getAdminList({ size: 100 })
+    staffList.value = page.content
+  } catch {
+    staffList.value = []
+  }
+}
+
+async function fetchWorkOrder() {
+  if (!isEdit.value) return
+  startPage()
+  try {
+    const wo = await workOrderApi.getByUuid(route.params.uuid as string)
+    form.title = wo.title
+    form.type = wo.type
+    form.description = wo.description
+    form.priority = wo.priority
+    form.customerName = wo.customerName
+    form.customerPhone = wo.customerPhone
+    form.assignedStaffUuid = wo.assignedStaffUuid
+    form.assignedStaffName = wo.assignedStaffName
+    form.status = wo.status
+    form.resolution = wo.resolution
+  } catch {
+    ElMessage.error('加载工单失败')
+  } finally {
+    stopPage()
+  }
+}
+
+onMounted(async () => {
+  await fetchStaffList()
+  const staffUuid = route.query.staffUuid as string
+  const staffName = route.query.staffName as string
+  if (isCreate.value && staffUuid) {
+    form.assignedStaffUuid = staffUuid
+    form.assignedStaffName = staffName || ''
+  }
+  await fetchWorkOrder()
+})
 
 function onStaffSelect(uuid: string) {
   if (!uuid) {
@@ -49,7 +94,7 @@ function onStaffSelect(uuid: string) {
     form.assignedStaffName = ''
     return
   }
-  const staff = staffList.find((s) => s.staffUuid === uuid)
+  const staff = staffList.value.find((s) => s.staffUuid === uuid)
   form.assignedStaffUuid = uuid
   form.assignedStaffName = staff?.name || ''
 }
@@ -68,7 +113,7 @@ async function handleSubmit() {
     ElMessage.warning(err)
     return
   }
-  submitting.value = true
+  startSubmit()
   try {
     const data = {
       title: form.title,
@@ -89,7 +134,7 @@ async function handleSubmit() {
     const err = e as { message?: string }
     ElMessage.error(err.message || '操作失败，请稍后重试')
   } finally {
-    submitting.value = false
+    stopSubmit()
   }
 }
 
@@ -100,11 +145,6 @@ async function handleComplete() {
   }
   try {
     await workOrderApi.complete(route.params.uuid as string, form.resolution)
-    const wo = workOrders.find((w) => w.workOrderUuid === route.params.uuid as string)
-    if (wo) {
-      wo.resolution = form.resolution
-      wo.status = WorkOrderStatus.COMPLETED
-    }
     form.status = WorkOrderStatus.COMPLETED
     ElMessage.success('工单已完成')
   } catch (e: unknown) {
@@ -116,30 +156,6 @@ async function handleComplete() {
 function handleCancel() {
   router.push('/admin/workorders')
 }
-
-onMounted(() => {
-  const staffUuid = route.query.staffUuid as string
-  const staffName = route.query.staffName as string
-  if (isCreate.value && staffUuid) {
-    form.assignedStaffUuid = staffUuid
-    form.assignedStaffName = staffName || ''
-  }
-  if (isEdit.value) {
-    const wo = workOrders.find((w) => w.workOrderUuid === route.params.uuid as string)
-    if (wo) {
-      form.title = wo.title
-      form.type = wo.type
-      form.description = wo.description
-      form.priority = wo.priority
-      form.customerName = wo.customerName
-      form.customerPhone = wo.customerPhone
-      form.assignedStaffUuid = wo.assignedStaffUuid
-      form.assignedStaffName = wo.assignedStaffName
-      form.status = wo.status
-      form.resolution = wo.resolution
-    }
-  }
-})
 </script>
 
 <template>

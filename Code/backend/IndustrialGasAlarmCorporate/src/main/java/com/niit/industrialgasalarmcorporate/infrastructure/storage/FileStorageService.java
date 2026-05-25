@@ -64,4 +64,18 @@ public class FileStorageService {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件上传失败");
         }
     }
+
+    public void delete(String fileUrl) {
+        if (fileUrl == null || !fileUrl.startsWith("/uploads/")) {
+            return;
+        }
+        String filename = fileUrl.substring("/uploads/".length());
+        Path targetPath = Paths.get(uploadPath, filename);
+        try {
+            Files.deleteIfExists(targetPath);
+            log.debug("文件已删除: {}", targetPath);
+        } catch (IOException e) {
+            log.warn("文件删除失败: {}", targetPath, e);
+        }
+    }
 }

@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { WorkOrderType, WorkOrderTypeMap, WorkOrderStatus, WorkOrderStatusMap, WorkOrderPriority, WorkOrderPriorityMap } from '@/types/workorder'
 import { StaffRoleMap } from '@/types/staff'
-import { workOrders, staffList, assignStaffToWorkOrder } from '@/data/workorder'
+import { workOrderApi } from '@/api/workorder'
+import { staffApi } from '@/api/staff'
 import type { WorkOrderVO } from '@/types/workorder'
+import type { StaffVO } from '@/types/staff'
+import { useLoading } from '@/composables/use-loading'
+import { usePagination } from '@/composables/use-pagination'
 
 const router = useRouter()
 
@@ -21,13 +25,51 @@ const priorityTagType: Record<string, string> = {
   [WorkOrderPriority.LOW]: 'info'
 }
 
+const workOrders = ref<WorkOrderVO[]>([])
+const staffList = ref<StaffVO[]>([])
+const { loading, start, stop } = useLoading()
+const { state: pagination, backendPage, setTotal, goToPage } = usePagination()
+
 const searchForm = ref({ title: '', type: '', status: '' })
-const currentPage = ref(1)
-const total = ref(workOrders.length)
 
 const assignDialogVisible = ref(false)
 const assignStaffUuid = ref('')
 const currentWorkOrderUuid = ref('')
+
+async function fetchWorkOrders() {
+  start()
+  try {
+    const params: Record<string, unknown> = {
+      page: backendPage.value,
+      size: pagination.value.size
+    }
+    if (searchForm.value.title) params.title = searchForm.value.title
+    if (searchForm.value.type) params.type = searchForm.value.type
+    if (searchForm.value.status) params.status = searchForm.value.status
+    const page = await workOrderApi.getAdminList(params as Parameters<typeof workOrderApi.getAdminList>[0])
+    workOrders.value = page.content
+    setTotal(page.totalElements, page.totalPages)
+  } catch {
+    workOrders.value = []
+    ElMessage.error('加载失败')
+  } finally {
+    stop()
+  }
+}
+
+async function fetchStaffList() {
+  try {
+    const page = await staffApi.getAdminList({ size: 100 })
+    staffList.value = page.content
+  } catch {
+    staffList.value = []
+  }
+}
+
+onMounted(() => {
+  fetchWorkOrders()
+  fetchStaffList()
+})
 
 function handleCreate() {
   router.push('/admin/workorders/create')
@@ -39,10 +81,14 @@ function handleEdit(uuid: string) {
 
 async function handleDelete(uuid: string) {
   await ElMessageBox.confirm('确认删除该工单？', '删除确认', { type: 'warning' })
-  const idx = workOrders.findIndex((w) => w.workOrderUuid === uuid)
-  if (idx !== -1) workOrders.splice(idx, 1)
-  total.value = workOrders.length
-  ElMessage.success('删除成功')
+  try {
+    await workOrderApi.remove(uuid)
+    ElMessage.success('删除成功')
+    await fetchWorkOrders()
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    ElMessage.error(err.message || '删除失败')
+  }
 }
 
 function openAssign(uuid: string) {
@@ -51,24 +97,32 @@ function openAssign(uuid: string) {
   assignDialogVisible.value = true
 }
 
-function handleAssign() {
+async function handleAssign() {
   if (!assignStaffUuid.value) {
     ElMessage.warning('请选择负责人')
     return
   }
-  const staff = staffList.find((s) => s.staffUuid === assignStaffUuid.value)
+  const staff = staffList.value.find((s) => s.staffUuid === assignStaffUuid.value)
   if (!staff) return
-  assignStaffToWorkOrder(currentWorkOrderUuid.value, assignStaffUuid.value, staff.name)
-  assignDialogVisible.value = false
-  ElMessage.success(`已安排 ${staff.name} 处理工单`)
+  try {
+    await workOrderApi.assign(currentWorkOrderUuid.value, assignStaffUuid.value, staff.name)
+    assignDialogVisible.value = false
+    ElMessage.success(`已安排 ${staff.name} 处理工单`)
+    await fetchWorkOrders()
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    ElMessage.error(err.message || '安排失败')
+  }
 }
 
 function handleSearch() {
-  currentPage.value = 1
+  goToPage(1)
+  fetchWorkOrders()
 }
 
 function handlePageChange(page: number) {
-  currentPage.value = page
+  goToPage(page)
+  fetchWorkOrders()
 }
 </script>
 
@@ -91,7 +145,15 @@ function handlePageChange(page: number) {
       <el-button type="primary" @click="handleCreate">新建工单</el-button>
     </div>
 
-    <div class="table-wrapper">
+    <div v-if="loading" class="loading-state">
+      <el-skeleton :rows="5" animated />
+    </div>
+
+    <div v-else-if="workOrders.length === 0" class="empty-state">
+      <p>暂无工单</p>
+    </div>
+
+    <div v-else class="table-wrapper">
       <el-table :data="workOrders" stripe style="width:100%">
         <el-table-column label="优先级" width="80">
           <template #default="{ row }">
@@ -133,9 +195,9 @@ function handlePageChange(page: number) {
 
     <div class="pagination-bar">
       <el-pagination
-        v-model:current-page="currentPage"
-        :total="total"
-        :page-size="20"
+        v-model:current-page="pagination.page"
+        :total="pagination.totalElements"
+        :page-size="pagination.size"
         layout="total, prev, pager, next"
         @current-change="handlePageChange"
       />
@@ -190,6 +252,25 @@ function handlePageChange(page: number) {
 .pagination-bar {
   display: flex;
   justify-content: flex-end;
+}
+
+.loading-state {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 40px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  color: #9ca3af;
+  font-size: 15px;
 }
 
 .unassigned {

@@ -28,14 +28,15 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(readOnly = true)
     public List<CategoryVO> getCategoriesByType(String type) {
-        List<Category> cached = cacheRepository.get(type);
+        List<CategoryVO> cached = cacheRepository.get(type);
         if (cached != null) {
-            return CategoryAssembler.toTree(cached);
+            return cached;
         }
         CategoryType categoryType = CategoryType.valueOf(type);
         List<Category> categories = categoryRepository.findByType(categoryType);
-        cacheRepository.put(type, categories);
-        return CategoryAssembler.toTree(categories);
+        List<CategoryVO> tree = CategoryAssembler.toTree(categories);
+        cacheRepository.put(type, tree);
+        return tree;
     }
 
     @Override

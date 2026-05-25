@@ -1,5 +1,6 @@
 package com.niit.industrialgasalarmcorporate.application.message.service.impl;
 
+import com.niit.industrialgasalarmcorporate.application.message.dto.AssignMessageDTO;
 import com.niit.industrialgasalarmcorporate.application.message.dto.BatchProcessDTO;
 import com.niit.industrialgasalarmcorporate.application.message.dto.ProcessMessageDTO;
 import com.niit.industrialgasalarmcorporate.application.message.dto.SubmitMessageDTO;
@@ -31,7 +32,7 @@ public class MessageServiceImpl implements MessageService {
 
     @Override
     @Transactional
-    public void submitMessage(SubmitMessageDTO dto, String ip) {
+    public String submitMessage(SubmitMessageDTO dto, String ip) {
         if (!rateLimitRepository.tryAcquirePhone(dto.getPhone())) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "您已提交过，请稍后再试");
         }
@@ -41,6 +42,16 @@ public class MessageServiceImpl implements MessageService {
         ContactMessage message = MessageAssembler.toEntity(dto, ip);
         messageRepository.save(message);
         log.info("留言提交成功: messageUuid={}, phone={}, ip={}", message.getMessageUuid(), dto.getPhone(), ip);
+        return message.getMessageUuid();
+    }
+
+    @Override
+    @Transactional
+    public void assignMessage(String messageUuid, AssignMessageDTO dto) {
+        ContactMessage message = messageRepository.findById(messageUuid)
+                .orElseThrow(() -> new MessageNotFoundException(messageUuid));
+        message.assign(dto.getStaffUuid(), dto.getStaffName());
+        messageRepository.save(message);
     }
 
     @Override
@@ -81,6 +92,30 @@ public class MessageServiceImpl implements MessageService {
         } else {
             domainPage = messageRepository.findAll(page, size, msgStatus);
         }
+        return new Page<>(
+                domainPage.getContent().stream().map(MessageAssembler::toVO).collect(Collectors.toList()),
+                domainPage.getTotalElements(),
+                domainPage.getSize(),
+                domainPage.getNumber()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<MessageVO> findUserMessages(String name, int page, int size) {
+        Page<ContactMessage> domainPage = messageRepository.findAllWithFilter(name, null, null, page, size);
+        return new Page<>(
+                domainPage.getContent().stream().map(MessageAssembler::toVO).collect(Collectors.toList()),
+                domainPage.getTotalElements(),
+                domainPage.getSize(),
+                domainPage.getNumber()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<MessageVO> findStaffMessages(String staffUuid, int page, int size) {
+        Page<ContactMessage> domainPage = messageRepository.findByAssignedStaffUuid(staffUuid, page, size);
         return new Page<>(
                 domainPage.getContent().stream().map(MessageAssembler::toVO).collect(Collectors.toList()),
                 domainPage.getTotalElements(),

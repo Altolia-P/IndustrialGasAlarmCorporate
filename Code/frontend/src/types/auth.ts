@@ -29,6 +29,11 @@ export interface CaptchaVO {
   token: string
 }
 
+export interface ResetPasswordDTO {
+  username: string
+  newPassword: string
+}
+
 export interface UserVO {
   userUuid: string
   username: string

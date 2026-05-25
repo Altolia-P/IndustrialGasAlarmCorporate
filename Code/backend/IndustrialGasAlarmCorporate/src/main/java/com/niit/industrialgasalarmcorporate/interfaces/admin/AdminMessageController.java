@@ -1,5 +1,6 @@
 package com.niit.industrialgasalarmcorporate.interfaces.admin;
 
+import com.niit.industrialgasalarmcorporate.application.message.dto.AssignMessageDTO;
 import com.niit.industrialgasalarmcorporate.application.message.dto.BatchProcessDTO;
 import com.niit.industrialgasalarmcorporate.application.message.dto.ProcessMessageDTO;
 import com.niit.industrialgasalarmcorporate.application.message.service.MessageService;
@@ -25,6 +26,13 @@ public class AdminMessageController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         return Result.ok(messageService.findMessages(name, phone, status, page, size));
+    }
+
+    @PutMapping("/messages/{uuid}/assign")
+    public Result<Void> assignMessage(@PathVariable String uuid,
+                                      @Valid @RequestBody AssignMessageDTO dto) {
+        messageService.assignMessage(uuid, dto);
+        return Result.ok("指派成功", null);
     }
 
     @PutMapping("/messages/{uuid}/process")

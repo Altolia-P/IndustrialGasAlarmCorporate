@@ -65,6 +65,18 @@ public class ContentRepositoryImpl implements ContentRepository {
     }
 
     @Override
+    public List<Content> searchByKeyword(String keyword, int limit) {
+        LambdaQueryWrapper<ContentPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.and(w -> w.like(ContentPO::getTitle, keyword).or().like(ContentPO::getSummary, keyword))
+                .eq(ContentPO::getType, ContentType.SOLUTION.name())
+                .eq(ContentPO::getStatus, ContentStatus.PUBLISHED.name())
+                .orderByDesc(ContentPO::getCreatedAt)
+                .last("LIMIT " + limit);
+        List<ContentPO> poList = contentMapper.selectList(wrapper);
+        return poList.stream().map(this::toDomain).collect(Collectors.toList());
+    }
+
+    @Override
     public Page<Content> findAllWithFilter(String title, ContentType type, String categoryUuid,
                                                   String status, int page, int size) {
         LambdaQueryWrapper<ContentPO> wrapper = new LambdaQueryWrapper<>();

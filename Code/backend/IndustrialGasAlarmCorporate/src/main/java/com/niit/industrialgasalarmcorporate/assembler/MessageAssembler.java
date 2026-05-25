@@ -26,6 +26,8 @@ public final class MessageAssembler {
         vo.setStatus(message.getStatus().name());
         vo.setProcessor(message.getProcessor());
         vo.setRemark(message.getRemark());
+        vo.setAssignedStaffUuid(message.getAssignedStaffUuid());
+        vo.setAssignedStaffName(message.getAssignedStaffName());
         if (message.getSubmittedAt() != null) {
             vo.setSubmittedAt(message.getSubmittedAt().format(FORMATTER));
         }

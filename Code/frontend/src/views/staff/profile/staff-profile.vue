@@ -1,46 +1,19 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { ElMessage } from 'element-plus'
 
 const authStore = useAuthStore()
-
-const form = reactive({
-  phone: '138****8888',
-  email: '',
-  company: ''
-})
-
-const submitting = ref(false)
-
-function handleSave() {
-  submitting.value = true
-  setTimeout(() => {
-    submitting.value = false
-    ElMessage.success('个人信息已保存')
-  }, 600)
-}
 </script>
 
 <template>
   <div class="staff-profile">
     <div class="profile-card">
       <h3>个人信息</h3>
-      <el-form :model="form" label-width="100px">
+      <el-form label-width="100px">
         <el-form-item label="用户名">
           <div class="readonly-field">{{ authStore.username }}</div>
         </el-form-item>
-        <el-form-item label="手机号">
-          <el-input v-model="form.phone" placeholder="请输入手机号" />
-        </el-form-item>
-        <el-form-item label="邮箱">
-          <el-input v-model="form.email" placeholder="请输入邮箱" />
-        </el-form-item>
-        <el-form-item label="所属公司">
-          <el-input v-model="form.company" placeholder="请输入公司名称" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :loading="submitting" @click="handleSave">保存</el-button>
+        <el-form-item label="角色">
+          <div class="readonly-field">{{ authStore.isStaff ? '员工' : '未知' }}</div>
         </el-form-item>
       </el-form>
     </div>

@@ -33,6 +33,7 @@ export const useAuthStore = defineStore('auth', () => {
     username.value = ''
     role.value = ''
     tokenVerified.value = false
+    authApi.logout().catch(() => {})
   }
 
   async function verifyToken(): Promise<boolean> {

@@ -39,6 +39,7 @@ export interface ProductDetailVO {
   coverImage: string
   images: ImageVO[]
   attributes: AttributeVO[]
+  body?: string
   categoryUuid: string
   categoryName: string
   status: ProductStatus

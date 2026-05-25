@@ -4,7 +4,6 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ProductStatus } from '@/types/product'
 import { productApi } from '@/api/product'
-import { adminProducts } from '@/data/content'
 
 const router = useRouter()
 const route = useRoute()
@@ -29,26 +28,6 @@ const categories = ref([
 ])
 
 const submitting = ref(false)
-
-function generateProductUuid(): string {
-  const today = new Date()
-  const dateStr =
-    today.getFullYear().toString() +
-    String(today.getMonth() + 1).padStart(2, '0') +
-    String(today.getDate()).padStart(2, '0') +
-    String(today.getHours()).padStart(2, '0') +
-    String(today.getMinutes()).padStart(2, '0') +
-    String(today.getSeconds()).padStart(2, '0')
-  return `P-${dateStr}`
-}
-
-function formatNow(): string {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
 
 function handleCoverChange(file: File) {
   form.coverImage = file
@@ -86,25 +65,8 @@ async function handleSubmit() {
     })
     if (isEdit.value) {
       await productApi.update(route.params.uuid as string, fd)
-      const existing = adminProducts.find((p) => p.productUuid === route.params.uuid)
-      if (existing) {
-        existing.name = form.name
-        existing.description = form.description
-        existing.status = form.status as ProductStatus
-        existing.categoryName = categories.value.find((c) => c.categoryUuid === form.categoryUuid)?.name ?? ''
-      }
     } else {
       await productApi.create(fd)
-      adminProducts.push({
-        productUuid: generateProductUuid(),
-        name: form.name,
-        description: form.description,
-        coverImage: '',
-        categoryUuid: form.categoryUuid,
-        categoryName: categories.value.find((c) => c.categoryUuid === form.categoryUuid)?.name ?? '',
-        status: form.status as ProductStatus,
-        createdAt: formatNow()
-      })
     }
     ElMessage.success(isEdit.value ? '保存成功' : '创建成功')
     router.push('/admin/products')

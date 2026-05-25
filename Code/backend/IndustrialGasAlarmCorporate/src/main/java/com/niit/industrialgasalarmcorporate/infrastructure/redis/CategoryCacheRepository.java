@@ -1,6 +1,6 @@
 package com.niit.industrialgasalarmcorporate.infrastructure.redis;
 
-import com.niit.industrialgasalarmcorporate.domain.category.Category;
+import com.niit.industrialgasalarmcorporate.application.category.vo.CategoryVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
@@ -19,15 +19,15 @@ public class CategoryCacheRepository {
     private static final long TTL_HOURS = 1;
 
     @SuppressWarnings("unchecked")
-    public List<Category> get(String type) {
+    public List<CategoryVO> get(String type) {
         Object value = redisTemplate.opsForValue().get(CACHE_KEY_PREFIX + type);
         if (value instanceof List) {
-            return (List<Category>) value;
+            return (List<CategoryVO>) value;
         }
         return null;
     }
 
-    public void put(String type, List<Category> categories) {
+    public void put(String type, List<CategoryVO> categories) {
         redisTemplate.opsForValue().set(CACHE_KEY_PREFIX + type, categories, TTL_HOURS, TimeUnit.HOURS);
     }
 

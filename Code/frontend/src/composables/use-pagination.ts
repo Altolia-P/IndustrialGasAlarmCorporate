@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 export interface PaginationState {
   page: number
@@ -15,6 +15,8 @@ export function usePagination(initialSize = 20) {
     totalPages: 0
   })
 
+  const backendPage = computed(() => state.value.page - 1)
+
   function setTotal(totalElements: number, totalPages: number) {
     state.value.totalElements = totalElements
     state.value.totalPages = totalPages
@@ -30,5 +32,5 @@ export function usePagination(initialSize = 20) {
     state.value.totalPages = 0
   }
 
-  return { state, setTotal, goToPage, reset }
+  return { state, backendPage, setTotal, goToPage, reset }
 }

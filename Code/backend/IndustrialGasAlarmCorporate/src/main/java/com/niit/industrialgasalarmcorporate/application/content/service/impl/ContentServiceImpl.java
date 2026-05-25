@@ -11,6 +11,7 @@ import com.niit.industrialgasalarmcorporate.common.exception.ContentNotFoundExce
 import com.niit.industrialgasalarmcorporate.domain.content.Content;
 import com.niit.industrialgasalarmcorporate.domain.content.ContentRepository;
 import com.niit.industrialgasalarmcorporate.domain.content.ContentType;
+import com.niit.industrialgasalarmcorporate.infrastructure.storage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 public class ContentServiceImpl implements ContentService {
 
     private final ContentRepository contentRepository;
+    private final FileStorageService fileStorageService;
 
     @Override
     @Transactional
@@ -38,7 +40,12 @@ public class ContentServiceImpl implements ContentService {
     public ContentVO updateContent(String contentUuid, UpdateContentDTO dto) {
         Content content = contentRepository.findById(contentUuid)
                 .orElseThrow(() -> new ContentNotFoundException(contentUuid));
+        String oldCoverImage = content.getCoverImage();
         ContentAssembler.updateEntity(content, dto);
+        if (dto.getCoverImage() != null && oldCoverImage != null
+                && !oldCoverImage.equals(dto.getCoverImage())) {
+            fileStorageService.delete(oldCoverImage);
+        }
         contentRepository.save(content);
         return ContentAssembler.toVO(content);
     }
@@ -49,6 +56,15 @@ public class ContentServiceImpl implements ContentService {
         Content content = contentRepository.findById(contentUuid)
                 .orElseThrow(() -> new ContentNotFoundException(contentUuid));
         content.publish();
+        contentRepository.save(content);
+    }
+
+    @Override
+    @Transactional
+    public void unpublishContent(String contentUuid) {
+        Content content = contentRepository.findById(contentUuid)
+                .orElseThrow(() -> new ContentNotFoundException(contentUuid));
+        content.unpublish();
         contentRepository.save(content);
     }
 
@@ -98,6 +114,9 @@ public class ContentServiceImpl implements ContentService {
     public void deleteContent(String contentUuid) {
         Content content = contentRepository.findById(contentUuid)
                 .orElseThrow(() -> new ContentNotFoundException(contentUuid));
+        if (content.getCoverImage() != null) {
+            fileStorageService.delete(content.getCoverImage());
+        }
         contentRepository.deleteById(contentUuid);
     }
 }

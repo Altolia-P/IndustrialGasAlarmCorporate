@@ -14,5 +14,7 @@ public interface MessageRepository {
 
     Page<ContactMessage> findAllWithFilter(String name, String phone, MessageStatus status, int page, int size);
 
+    Page<ContactMessage> findByAssignedStaffUuid(String staffUuid, int page, int size);
+
     boolean existsByPhoneInWindow(String phone, int seconds);
 }
