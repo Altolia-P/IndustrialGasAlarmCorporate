@@ -1,0 +1,37 @@
+server:
+  port: 8081
+
+simulator:
+  enabled: true
+  interval-ms: 5000
+  target-url: http://localhost:8080/api/v1/public/device-data
+  devices:
+    - device-uuid: "4c165b10-cff5-4290-befa-ec4cc4e66f46"
+      gas-type: CH4
+      concentration:
+        min: 0.0
+        max: 3.0
+      battery:
+        min: 3.2
+        max: 4.2
+      temperature:
+        min: 15.0
+        max: 35.0
+      humidity:
+        min: 30.0
+        max: 70.0
+    - device-uuid: "4c165b10-cff5-4290-befa-ec4cc4e66f46"
+      gas-type: H2S
+      battery:
+        min: 3.0
+        max: 4.0
+      temperature:
+        min: 20.0
+        max: 40.0
+      humidity:
+        min: 25.0
+        max: 65.0
+
+logging:
+  level:
+    com.niit.simulator: DEBUG
