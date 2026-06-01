@@ -26,4 +26,6 @@ public interface AlertRepository {
     long countToday();
 
     Map<LocalDate, Long> countByDay(LocalDate from, LocalDate to);
+
+    java.util.List<Alert> findByDeviceUuids(java.util.Collection<String> deviceUuids, int limit);
 }

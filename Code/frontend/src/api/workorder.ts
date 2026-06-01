@@ -56,7 +56,23 @@ export const workOrderApi = {
   }): Promise<Page<WorkOrderVO>> {
     return request.get('/staff/workorders', { params })
   },
+  getMyTaskByUuid(uuid: string): Promise<WorkOrderVO> {
+    return request.get(`/staff/workorders/${uuid}`)
+  },
+  completeMyTask(uuid: string, resolution: string): Promise<null> {
+    return request.put(`/staff/workorders/${uuid}/complete`, { resolution })
+  },
   getUserWorkOrders(params: { page?: number; size?: number }): Promise<Page<WorkOrderVO>> {
     return request.get('/user/workorders', { params })
+  },
+  createByUser(data: {
+    title: string
+    type: string
+    description: string
+    priority: string
+    customerName: string
+    customerPhone?: string
+  }): Promise<WorkOrderVO> {
+    return request.post('/user/workorders', data)
   }
 }

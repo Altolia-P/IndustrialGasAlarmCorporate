@@ -12,8 +12,7 @@ import com.niit.industrialgasalarmcorporate.infrastructure.repository.po.Content
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Repository
@@ -58,9 +57,7 @@ public class ContentRepositoryImpl implements ContentRepository {
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size);
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<ContentPO> result =
                 contentMapper.selectPage(mpPage, wrapper);
-        List<Content> contents = result.getRecords().stream()
-                .map(this::toDomain)
-                .collect(Collectors.toList());
+        List<Content> contents = enrichContents(result.getRecords());
         return new Page<>(contents, result.getTotal(), (int) result.getSize(), (int) result.getCurrent());
     }
 
@@ -73,7 +70,7 @@ public class ContentRepositoryImpl implements ContentRepository {
                 .orderByDesc(ContentPO::getCreatedAt)
                 .last("LIMIT " + limit);
         List<ContentPO> poList = contentMapper.selectList(wrapper);
-        return poList.stream().map(this::toDomain).collect(Collectors.toList());
+        return enrichContents(poList);
     }
 
     @Override
@@ -97,18 +94,32 @@ public class ContentRepositoryImpl implements ContentRepository {
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size);
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<ContentPO> result =
                 contentMapper.selectPage(mpPage, wrapper);
-        List<Content> contents = result.getRecords().stream()
-                .map(this::toDomain)
-                .collect(Collectors.toList());
+        List<Content> contents = enrichContents(result.getRecords());
         return new Page<>(contents, result.getTotal(), (int) result.getSize(), (int) result.getCurrent());
     }
 
+    private List<Content> enrichContents(List<ContentPO> records) {
+        if (records.isEmpty()) return Collections.emptyList();
+        List<String> categoryUuids = records.stream()
+                .map(ContentPO::getCategoryUuid).filter(Objects::nonNull).distinct().toList();
+        Map<String, String> categoryNames = categoryUuids.isEmpty() ? Collections.emptyMap()
+                : categoryMapper.selectBatchIds(categoryUuids).stream()
+                .collect(Collectors.toMap(c -> c.getCategoryUuid(), c -> c.getName(), (a, b) -> a));
+        return records.stream()
+                .map(po -> toDomain(po, categoryNames.get(po.getCategoryUuid())))
+                .collect(Collectors.toList());
+    }
+
     private Content toDomain(ContentPO po) {
-        String categoryName = null;
-        if (po.getCategoryUuid() != null) {
+        return toDomain(po, null);
+    }
+
+    private Content toDomain(ContentPO po, String categoryName) {
+        String name = categoryName;
+        if (name == null && po.getCategoryUuid() != null) {
             var cat = categoryMapper.selectById(po.getCategoryUuid());
             if (cat != null) {
-                categoryName = cat.getName();
+                name = cat.getName();
             }
         }
         return new Content(
@@ -120,7 +131,7 @@ public class ContentRepositoryImpl implements ContentRepository {
                 ContentType.valueOf(po.getType()),
                 ContentStatus.valueOf(po.getStatus()),
                 po.getCategoryUuid(),
-                categoryName,
+                name,
                 po.getCreatedAt(),
                 po.getUpdatedAt()
         );

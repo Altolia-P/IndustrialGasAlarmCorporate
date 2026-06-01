@@ -7,6 +7,7 @@ import { productApi } from '@/api/product'
 import type { ProductVO } from '@/types/product'
 import { useLoading } from '@/composables/use-loading'
 import { usePagination } from '@/composables/use-pagination'
+import { useExport } from '@/composables/use-export'
 
 const router = useRouter()
 
@@ -19,6 +20,7 @@ const statusMap: Record<string, { text: string; type: string }> = {
 const products = ref<ProductVO[]>([])
 const { loading, start, stop } = useLoading()
 const { state: pagination, backendPage, setTotal, goToPage } = usePagination()
+const { exportToExcel } = useExport()
 
 const searchForm = ref({ name: '', status: '' })
 
@@ -88,6 +90,25 @@ async function handleUnpublish(uuid: string) {
   }
 }
 
+const prodExportCols = [
+  { header: '产品名称', key: 'name' },
+  { header: '分类', key: 'categoryName' },
+  { header: '状态', key: 'status' },
+  { header: '创建时间', key: 'createdAt' }
+]
+
+async function handleExport() {
+  const params: Record<string, unknown> = {}
+  if (searchForm.value.name) params.name = searchForm.value.name
+  if (searchForm.value.status) params.status = searchForm.value.status
+  await exportToExcel(
+    (p) => productApi.getAdminList(p as any),
+    params,
+    prodExportCols,
+    '产品列表'
+  )
+}
+
 function handleSearch() {
   goToPage(1)
   fetchProducts()
@@ -112,6 +133,7 @@ function handlePageChange(page: number) {
         <el-button type="primary" @click="handleSearch">搜索</el-button>
       </div>
       <el-button type="primary" @click="handleCreate">新增产品</el-button>
+      <el-button @click="handleExport">导出Excel</el-button>
     </div>
 
     <div v-if="loading" class="loading-state">

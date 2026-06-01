@@ -8,7 +8,8 @@ import com.niit.industrialgasalarmcorporate.infrastructure.repository.po.UserPO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -20,6 +21,25 @@ public class UserRepositoryImpl implements UserRepository {
     public Optional<User> findByUsername(String username) {
         LambdaQueryWrapper<UserPO> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(UserPO::getUsername, username);
+        UserPO po = userMapper.selectOne(wrapper);
+        if (po == null) {
+            return Optional.empty();
+        }
+        return Optional.of(toDomain(po));
+    }
+
+    @Override
+    public List<User> findByIds(Collection<String> userUuids) {
+        if (userUuids == null || userUuids.isEmpty()) return Collections.emptyList();
+        return userMapper.selectBatchIds(userUuids).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<User> findByPhone(String phone) {
+        LambdaQueryWrapper<UserPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserPO::getPhone, phone);
         UserPO po = userMapper.selectOne(wrapper);
         if (po == null) {
             return Optional.empty();

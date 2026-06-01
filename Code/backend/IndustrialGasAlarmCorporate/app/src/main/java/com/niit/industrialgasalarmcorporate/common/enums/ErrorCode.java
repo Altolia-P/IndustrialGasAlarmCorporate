@@ -20,6 +20,7 @@ public enum ErrorCode {
     ALERT_RULE_NOT_FOUND(4014, "报警规则不存在"),
     ALERT_NOT_FOUND(4015, "报警记录不存在"),
     NOTIFICATION_NOT_FOUND(4016, "通知记录不存在"),
+    SYSTEM_CONFIG_NOT_FOUND(4017, "系统配置不存在"),
     SYSTEM_ERROR(5001, "系统内部错误");
 
     private final int code;

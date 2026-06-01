@@ -25,6 +25,26 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) {
         ensureTables();
         ensureAdminUser();
+        ensureStaffUserUuid();
+    }
+
+    private void ensureStaffUserUuid() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE t_staff ADD COLUMN user_uuid CHAR(36) NULL AFTER staff_uuid");
+            log.info("t_staff 新增 user_uuid 列");
+        } catch (Exception e) {
+            log.info("t_staff.user_uuid 列已存在，跳过");
+        }
+        // 回填：通过 phone 匹配 User → Staff
+        int updated = jdbcTemplate.update("""
+                UPDATE t_staff s
+                JOIN t_admin_user u ON s.phone = u.phone AND u.role = 'STAFF'
+                SET s.user_uuid = u.user_uuid
+                WHERE s.user_uuid IS NULL
+                """);
+        if (updated > 0) {
+            log.info("已回填 {} 条 staff.user_uuid 关联", updated);
+        }
     }
 
     private void ensureTables() {
@@ -270,7 +290,39 @@ public class DataInitializer implements CommandLineRunner {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """);
 
-        log.info("数据库表初始化完成 (14 tables)");
+        jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS t_download_file (
+                    download_uuid CHAR(36)     PRIMARY KEY,
+                    display_name  VARCHAR(200) NOT NULL,
+                    original_name VARCHAR(200) NOT NULL,
+                    file_size     BIGINT       NOT NULL DEFAULT 0,
+                    content_type  VARCHAR(100) NOT NULL DEFAULT 'application/octet-stream',
+                    stored_path   VARCHAR(500) NOT NULL,
+                    version       INT          NOT NULL DEFAULT 0,
+                    deleted       TINYINT(1)   NOT NULL DEFAULT 0,
+                    created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                """);
+
+        jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS t_comment (
+                    comment_uuid CHAR(36)     PRIMARY KEY,
+                    target_type  VARCHAR(20)  NOT NULL,
+                    target_uuid  CHAR(36)     NOT NULL,
+                    author_type  VARCHAR(20)  NOT NULL,
+                    author_uuid  CHAR(36)     NOT NULL,
+                    author_name  VARCHAR(100) NOT NULL,
+                    content      VARCHAR(500) NOT NULL,
+                    version      INT          NOT NULL DEFAULT 0,
+                    deleted      TINYINT(1)   NOT NULL DEFAULT 0,
+                    created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_comment_target (target_type, target_uuid)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                """);
+
+        log.info("数据库表初始化完成 (16 tables)");
     }
 
     private void ensureAdminUser() {

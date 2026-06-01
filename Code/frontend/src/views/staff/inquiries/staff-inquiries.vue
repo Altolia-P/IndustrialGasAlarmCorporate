@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { messageApi } from '@/api/message'
+import { commentApi } from '@/api/comment'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import { MessageStatus, MessageStatusMap } from '@/types/message'
 import type { MessageVO } from '@/types/message'
 import { useLoading } from '@/composables/use-loading'
@@ -29,6 +31,14 @@ const statusTagType: Record<string, string> = {
   [MessageStatus.IN_PROGRESS]: 'primary',
   [MessageStatus.PROCESSED]: 'success'
 }
+
+const detailDialogVisible = ref(false)
+const detailInquiry = ref<MessageVO | null>(null)
+
+function openDetail(item: MessageVO) {
+  detailInquiry.value = item
+  detailDialogVisible.value = true
+}
 </script>
 
 <template>
@@ -49,7 +59,7 @@ const statusTagType: Record<string, string> = {
     </div>
 
     <div v-else class="inquiry-list">
-      <div v-for="item in inquiries" :key="item.messageUuid" class="inquiry-card">
+      <div v-for="item in inquiries" :key="item.messageUuid" class="inquiry-card" @click="openDetail(item)">
         <div class="inquiry-header">
           <div class="inquiry-left">
             <h4 class="inquiry-name">{{ item.name }}</h4>
@@ -69,6 +79,24 @@ const statusTagType: Record<string, string> = {
         </div>
       </div>
     </div>
+
+    <el-dialog v-model="detailDialogVisible" title="咨询详情" width="640px" @closed="detailInquiry = null">
+      <template v-if="detailInquiry">
+        <div class="detail-info">
+          <div class="detail-row"><span class="detail-label">姓名：</span>{{ detailInquiry.name }}</div>
+          <div class="detail-row"><span class="detail-label">电话：</span>{{ detailInquiry.phone }}</div>
+          <div class="detail-row"><span class="detail-label">内容：</span>{{ detailInquiry.content }}</div>
+          <div class="detail-row"><span class="detail-label">状态：</span>
+            <el-tag :type="statusTagType[detailInquiry.status]" size="small">{{ MessageStatusMap[detailInquiry.status as MessageStatus] }}</el-tag>
+          </div>
+          <div class="detail-row"><span class="detail-label">提交时间：</span>{{ detailInquiry.submittedAt }}</div>
+        </div>
+        <CommentSection
+          :fetch-comments="() => commentApi.getStaffInquiryComments(detailInquiry!.messageUuid)"
+          :add-comment="(content: string) => commentApi.addStaffInquiryComment(detailInquiry!.messageUuid, content)"
+        />
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -106,6 +134,12 @@ const statusTagType: Record<string, string> = {
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.inquiry-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .inquiry-header {
@@ -155,5 +189,23 @@ const statusTagType: Record<string, string> = {
 .inquiry-time {
   font-size: 13px;
   color: #9ca3af;
+}
+
+.detail-info {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.detail-row {
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.8;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #6b7280;
 }
 </style>

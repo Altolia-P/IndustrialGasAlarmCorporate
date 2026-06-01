@@ -14,6 +14,10 @@ import com.niit.industrialgasalarmcorporate.common.exception.MessageNotFoundExce
 import com.niit.industrialgasalarmcorporate.domain.message.ContactMessage;
 import com.niit.industrialgasalarmcorporate.domain.message.MessageRepository;
 import com.niit.industrialgasalarmcorporate.domain.message.MessageStatus;
+import com.niit.industrialgasalarmcorporate.domain.staff.StaffRepository;
+import com.niit.industrialgasalarmcorporate.domain.staff.StaffStatus;
+import com.niit.industrialgasalarmcorporate.domain.workorder.WorkOrderRepository;
+import com.niit.industrialgasalarmcorporate.domain.workorder.WorkOrderStatus;
 import com.niit.industrialgasalarmcorporate.infrastructure.redis.MessageRateLimitRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +33,8 @@ public class MessageServiceImpl implements MessageService {
 
     private final MessageRepository messageRepository;
     private final MessageRateLimitRepository rateLimitRepository;
+    private final StaffRepository staffRepository;
+    private final WorkOrderRepository workOrderRepository;
 
     @Override
     @Transactional
@@ -50,8 +56,15 @@ public class MessageServiceImpl implements MessageService {
     public void assignMessage(String messageUuid, AssignMessageDTO dto) {
         ContactMessage message = messageRepository.findById(messageUuid)
                 .orElseThrow(() -> new MessageNotFoundException(messageUuid));
+        var staff = staffRepository.findById(dto.getStaffUuid())
+                .orElseThrow(() -> new BusinessException(ErrorCode.STAFF_NOT_FOUND));
+        if (!staff.isAvailable()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "该员工当前状态不可用（休假/出差中）");
+        }
         message.assign(dto.getStaffUuid(), dto.getStaffName());
         messageRepository.save(message);
+        staff.changeStatus(StaffStatus.WORKING);
+        staffRepository.save(staff);
     }
 
     @Override
@@ -59,8 +72,20 @@ public class MessageServiceImpl implements MessageService {
     public void markProcessed(String messageUuid, ProcessMessageDTO dto, String processor) {
         ContactMessage message = messageRepository.findById(messageUuid)
                 .orElseThrow(() -> new MessageNotFoundException(messageUuid));
+        String staffUuid = message.getAssignedStaffUuid();
         message.markProcessed(processor, dto.getRemark());
         messageRepository.save(message);
+
+        if (staffUuid != null) {
+            long remainingMsg = messageRepository.countByStaffAndStatus(staffUuid, MessageStatus.IN_PROGRESS);
+            long remainingWo = workOrderRepository.countByStaffAndStatus(staffUuid, WorkOrderStatus.IN_PROGRESS);
+            if (remainingMsg == 0 && remainingWo == 0) {
+                staffRepository.findById(staffUuid).ifPresent(staff -> {
+                    staff.changeStatus(StaffStatus.STANDBY);
+                    staffRepository.save(staff);
+                });
+            }
+        }
     }
 
     @Override
@@ -110,6 +135,39 @@ public class MessageServiceImpl implements MessageService {
                 domainPage.getSize(),
                 domainPage.getNumber()
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MessageVO getMyInquiryDetail(String staffUuid, String messageUuid) {
+        ContactMessage message = messageRepository.findById(messageUuid)
+                .orElseThrow(() -> new MessageNotFoundException(messageUuid));
+        if (!staffUuid.equals(message.getAssignedStaffUuid())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "该咨询未分配给您");
+        }
+        return MessageAssembler.toVO(message);
+    }
+
+    @Override
+    @Transactional
+    public void markMyInquiryProcessed(String staffUuid, String messageUuid,
+                                        ProcessMessageDTO dto, String processorName) {
+        ContactMessage message = messageRepository.findById(messageUuid)
+                .orElseThrow(() -> new MessageNotFoundException(messageUuid));
+        if (!staffUuid.equals(message.getAssignedStaffUuid())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "该咨询未分配给您");
+        }
+        message.markProcessed(processorName, dto.getRemark());
+        messageRepository.save(message);
+
+        long remainingMsg = messageRepository.countByStaffAndStatus(staffUuid, MessageStatus.IN_PROGRESS);
+        long remainingWo = workOrderRepository.countByStaffAndStatus(staffUuid, WorkOrderStatus.IN_PROGRESS);
+        if (remainingMsg == 0 && remainingWo == 0) {
+            staffRepository.findById(staffUuid).ifPresent(staff -> {
+                staff.changeStatus(StaffStatus.STANDBY);
+                staffRepository.save(staff);
+            });
+        }
     }
 
     @Override

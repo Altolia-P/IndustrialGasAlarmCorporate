@@ -11,8 +11,7 @@ import com.niit.industrialgasalarmcorporate.infrastructure.repository.po.DeviceP
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Repository
@@ -28,6 +27,14 @@ public class DeviceRepositoryImpl implements DeviceRepository {
             return Optional.empty();
         }
         return Optional.of(toDomain(po));
+    }
+
+    @Override
+    public List<Device> findByIds(Collection<String> deviceUuids) {
+        if (deviceUuids == null || deviceUuids.isEmpty()) return Collections.emptyList();
+        return deviceMapper.selectBatchIds(deviceUuids).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
     }
 
     @Override

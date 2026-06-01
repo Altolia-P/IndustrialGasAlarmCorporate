@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import type { StaffVO } from '@/types/staff'
+import type { StaffVO, UpdateStaffProfileDTO } from '@/types/staff'
 import type { Page } from '@/types/common'
 
 export const staffApi = {
@@ -19,6 +19,8 @@ export const staffApi = {
     name: string
     phone: string
     email?: string
+    username: string
+    password: string
     role: string
     status: string
   }): Promise<StaffVO> {
@@ -35,5 +37,20 @@ export const staffApi = {
   },
   remove(uuid: string): Promise<null> {
     return request.delete(`/admin/staff/${uuid}`)
+  },
+  getMyProfile(): Promise<StaffVO> {
+    return request.get('/staff/me')
+  },
+  updateMyProfile(dto: UpdateStaffProfileDTO): Promise<StaffVO> {
+    return request.put('/staff/profile', dto)
+  }
+}
+
+export const staffNotifyApi = {
+  getUnreadCount(since?: string): Promise<number> {
+    return request.get('/staff/notifications/unread-count', { params: since ? { since } : {} })
+  },
+  getRecentNotifications(): Promise<import('@/types/device').NotificationVO[]> {
+    return request.get('/staff/notifications/recent')
   }
 }

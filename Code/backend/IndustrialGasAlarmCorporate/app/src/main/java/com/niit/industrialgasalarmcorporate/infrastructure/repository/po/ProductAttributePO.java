@@ -20,6 +20,7 @@ public class ProductAttributePO {
 
     private String attrVal;
 
+    @Version
     private Integer version;
 
     @TableLogic

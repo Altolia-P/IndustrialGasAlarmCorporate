@@ -3,6 +3,8 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { workOrderApi } from '@/api/workorder'
+import { commentApi } from '@/api/comment'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import { WorkOrderType, WorkOrderTypeMap, WorkOrderStatus, WorkOrderStatusMap, WorkOrderPriority, WorkOrderPriorityMap } from '@/types/workorder'
 import type { WorkOrderVO } from '@/types/workorder'
 import { useLoading } from '@/composables/use-loading'
@@ -19,7 +21,7 @@ async function fetchTask() {
   start()
   try {
     const uuid = route.params.uuid as string
-    task.value = await workOrderApi.getByUuid(uuid)
+    task.value = await workOrderApi.getMyTaskByUuid(uuid)
   } catch {
     task.value = null
   } finally {
@@ -39,7 +41,7 @@ async function handleComplete() {
   if (!task.value) return
   startSubmit()
   try {
-    await workOrderApi.complete(task.value.workOrderUuid, resolution.value)
+    await workOrderApi.completeMyTask(task.value.workOrderUuid, resolution.value)
     ElMessage.success('工单已完成')
     task.value.status = WorkOrderStatus.COMPLETED
     task.value.resolution = resolution.value
@@ -122,6 +124,11 @@ function goBack() {
           show-word-limit
         />
       </div>
+
+      <CommentSection
+        :fetch-comments="() => commentApi.getStaffWorkOrderComments(task!.workOrderUuid)"
+        :add-comment="(content: string) => commentApi.addStaffWorkOrderComment(task!.workOrderUuid, content)"
+      />
 
       <div class="detail-actions">
         <el-button

@@ -14,6 +14,8 @@ interface StaffForm {
   name: string
   phone: string
   email: string
+  username: string
+  password: string
   role: StaffRole
   status: StaffStatus
 }
@@ -22,6 +24,8 @@ const form = reactive<StaffForm>({
   name: '',
   phone: '',
   email: '',
+  username: '',
+  password: '',
   role: StaffRole.FIELD_TECH,
   status: StaffStatus.STANDBY
 })
@@ -52,6 +56,12 @@ function validate(): string | null {
   if (!form.phone || !form.phone.trim()) return '请输入联系电话'
   if (!RE_PHONE.test(form.phone)) return '请输入正确的手机号码'
   if (form.email && !RE_EMAIL.test(form.email)) return '请输入正确的电子邮箱'
+  if (!isEdit.value) {
+    if (!form.username || !form.username.trim()) return '请输入登录账号'
+    if (!/^[a-zA-Z0-9_]{4,20}$/.test(form.username)) return '账号由4-20位字母、数字或下划线组成'
+    if (!form.password || !form.password.trim()) return '请输入登录密码'
+    if (form.password.length < 6) return '密码长度至少6位'
+  }
   return null
 }
 
@@ -63,17 +73,24 @@ async function handleSubmit() {
   }
   submitting.value = true
   try {
-    const data = {
-      name: form.name,
-      phone: form.phone,
-      email: form.email,
-      role: form.role,
-      status: form.status
-    }
     if (isEdit.value) {
-      await staffApi.update(route.params.uuid as string, data)
+      await staffApi.update(route.params.uuid as string, {
+        name: form.name,
+        phone: form.phone,
+        email: form.email,
+        role: form.role,
+        status: form.status
+      })
     } else {
-      await staffApi.create(data)
+      await staffApi.create({
+        name: form.name,
+        phone: form.phone,
+        email: form.email,
+        username: form.username,
+        password: form.password,
+        role: form.role,
+        status: form.status
+      })
     }
     ElMessage.success(isEdit.value ? '修改成功' : '新增成功')
     router.push('/admin/staff')
@@ -119,6 +136,14 @@ onMounted(async () => {
         <el-form-item label="电子邮箱">
           <el-input v-model="form.email" placeholder="请输入电子邮箱" maxlength="50" />
         </el-form-item>
+        <template v-if="!isEdit">
+          <el-form-item label="登录账号" required>
+            <el-input v-model="form.username" placeholder="4-20位字母、数字或下划线" maxlength="20" />
+          </el-form-item>
+          <el-form-item label="登录密码" required>
+            <el-input v-model="form.password" type="password" placeholder="至少6位" maxlength="32" show-password />
+          </el-form-item>
+        </template>
         <el-form-item label="岗位分类" required>
           <el-select v-model="form.role" placeholder="请选择岗位" style="width: 100%">
             <el-option v-for="(label, key) in StaffRoleMap" :key="key" :label="label" :value="key" />

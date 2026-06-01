@@ -7,8 +7,13 @@ import com.niit.industrialgasalarmcorporate.assembler.WorkOrderAssembler;
 import com.niit.industrialgasalarmcorporate.common.base.Page;
 import com.niit.industrialgasalarmcorporate.common.enums.ErrorCode;
 import com.niit.industrialgasalarmcorporate.common.exception.BusinessException;
+import com.niit.industrialgasalarmcorporate.domain.message.MessageRepository;
+import com.niit.industrialgasalarmcorporate.domain.message.MessageStatus;
+import com.niit.industrialgasalarmcorporate.domain.staff.StaffRepository;
+import com.niit.industrialgasalarmcorporate.domain.staff.StaffStatus;
 import com.niit.industrialgasalarmcorporate.domain.workorder.WorkOrder;
 import com.niit.industrialgasalarmcorporate.domain.workorder.WorkOrderRepository;
+import com.niit.industrialgasalarmcorporate.domain.workorder.WorkOrderStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +25,8 @@ import java.util.stream.Collectors;
 public class WorkOrderServiceImpl implements WorkOrderService {
 
     private final WorkOrderRepository workOrderRepository;
+    private final StaffRepository staffRepository;
+    private final MessageRepository messageRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -64,8 +71,15 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     public void assignWorkOrder(String workOrderUuid, AssignWorkOrderDTO dto) {
         WorkOrder workOrder = workOrderRepository.findById(workOrderUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND));
+        var staff = staffRepository.findById(dto.getStaffUuid())
+                .orElseThrow(() -> new BusinessException(ErrorCode.STAFF_NOT_FOUND));
+        if (!staff.isAvailable()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "该员工当前状态不可用（休假/出差中）");
+        }
         workOrder.assign(dto.getStaffUuid(), dto.getStaffName());
         workOrderRepository.save(workOrder);
+        staff.changeStatus(StaffStatus.WORKING);
+        staffRepository.save(staff);
     }
 
     @Override
@@ -73,8 +87,46 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     public void completeWorkOrder(String workOrderUuid, CompleteWorkOrderDTO dto) {
         WorkOrder workOrder = workOrderRepository.findById(workOrderUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND));
-        workOrder.complete(dto.getResolution());
+        doComplete(workOrder, dto.getResolution());
+    }
+
+    @Override
+    @Transactional
+    public WorkOrderVO getMyTaskDetail(String staffUuid, String workOrderUuid) {
+        WorkOrder workOrder = workOrderRepository.findById(workOrderUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND));
+        if (!staffUuid.equals(workOrder.getAssignedStaffUuid())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "该工单未分配给您");
+        }
+        return WorkOrderAssembler.toVO(workOrder);
+    }
+
+    @Override
+    @Transactional
+    public void completeMyTask(String staffUuid, String workOrderUuid, CompleteWorkOrderDTO dto) {
+        WorkOrder workOrder = workOrderRepository.findById(workOrderUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND));
+        if (!staffUuid.equals(workOrder.getAssignedStaffUuid())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "该工单未分配给您，无法完成");
+        }
+        doComplete(workOrder, dto.getResolution());
+    }
+
+    private void doComplete(WorkOrder workOrder, String resolution) {
+        String staffUuid = workOrder.getAssignedStaffUuid();
+        workOrder.complete(resolution);
         workOrderRepository.save(workOrder);
+
+        if (staffUuid != null) {
+            long remainingWo = workOrderRepository.countByStaffAndStatus(staffUuid, WorkOrderStatus.IN_PROGRESS);
+            long remainingMsg = messageRepository.countByStaffAndStatus(staffUuid, MessageStatus.IN_PROGRESS);
+            if (remainingWo == 0 && remainingMsg == 0) {
+                staffRepository.findById(staffUuid).ifPresent(staff -> {
+                    staff.changeStatus(StaffStatus.STANDBY);
+                    staffRepository.save(staff);
+                });
+            }
+        }
     }
 
     @Override

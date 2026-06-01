@@ -1,37 +1,69 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ContentType, ContentStatus, ContentStatusMap } from '@/types/content'
 import { contentApi } from '@/api/content'
+import { categoryApi } from '@/api/category'
+import { CategoryType } from '@/types/category'
 
 const router = useRouter()
 const route = useRoute()
 
 const isEdit = ref(!!route.params.uuid)
+const loading = ref(false)
 
 const form = reactive({
   title: '',
-  categoryName: '',
+  categoryUuid: '',
   body: '',
   coverImage: null as File | null,
   status: ContentStatus.DRAFT
 })
 
-const categories = ref([
-  { value: '公司新闻', label: '公司新闻' },
-  { value: '行业动态', label: '行业动态' },
-  { value: '产品发布', label: '产品发布' }
-])
+const categories = ref<{ categoryUuid: string; name: string }[]>([])
 
 const submitting = ref(false)
+const coverInput = ref<HTMLInputElement | null>(null)
+
+async function fetchCategories() {
+  try {
+    categories.value = await categoryApi.getAdminCategories(CategoryType.CONTENT_CATEGORY)
+  } catch {
+    // categories remain empty
+  }
+}
+
+async function fetchNews() {
+  loading.value = true
+  try {
+    const detail = await contentApi.getAdminDetail(route.params.uuid as string)
+    form.title = detail.title
+    form.categoryUuid = detail.categoryUuid
+    form.body = detail.body || ''
+    form.status = detail.status
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    ElMessage.error(err.message || '加载新闻数据失败')
+    router.push('/admin/news')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchCategories()
+  if (isEdit.value) {
+    fetchNews()
+  }
+})
 
 async function handleSubmit() {
   if (!form.title) {
     ElMessage.warning('请填写新闻标题')
     return
   }
-  if (!form.categoryName) {
+  if (!form.categoryUuid) {
     ElMessage.warning('请选择新闻分类')
     return
   }
@@ -43,8 +75,8 @@ async function handleSubmit() {
   try {
     const fd = new FormData()
     fd.append('title', form.title)
-    fd.append('type', 'NEWS')
-    fd.append('categoryName', form.categoryName)
+    fd.append('type', ContentType.NEWS)
+    fd.append('categoryUuid', form.categoryUuid)
     fd.append('body', form.body)
     fd.append('status', form.status)
     if (form.coverImage) fd.append('coverImage', form.coverImage)
@@ -63,6 +95,13 @@ async function handleSubmit() {
   }
 }
 
+function onCoverChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  if (input.files && input.files[0]) {
+    form.coverImage = input.files[0]
+  }
+}
+
 function handleCancel() {
   router.push('/admin/news')
 }
@@ -70,17 +109,17 @@ function handleCancel() {
 
 <template>
   <div class="admin-news-edit">
-    <div class="form-card">
+    <div class="form-card" v-loading="loading">
       <h2 class="form-title">{{ isEdit ? '编辑新闻' : '新增新闻' }}</h2>
 
-      <el-form :model="form" label-width="100px" class="edit-form">
+      <el-form v-if="!loading" :model="form" label-width="100px" class="edit-form">
         <el-form-item label="新闻标题" required>
           <el-input v-model="form.title" placeholder="请输入新闻标题" maxlength="100" show-word-limit />
         </el-form-item>
 
         <el-form-item label="新闻分类" required>
-          <el-select v-model="form.categoryName" placeholder="请选择分类" style="width:100%">
-            <el-option v-for="cat in categories" :key="cat.value" :label="cat.label" :value="cat.value" />
+          <el-select v-model="form.categoryUuid" placeholder="请选择分类" style="width:100%">
+            <el-option v-for="cat in categories" :key="cat.categoryUuid" :label="cat.name" :value="cat.categoryUuid" />
           </el-select>
         </el-form-item>
 
@@ -95,8 +134,10 @@ function handleCancel() {
 
         <el-form-item label="封面图片">
           <div class="upload-area">
-            <el-button type="primary" plain>选择图片</el-button>
-            <span class="upload-tip">支持 jpg、png、webp，≤5MB</span>
+            <input ref="coverInput" type="file" accept="image/jpeg,image/png,image/webp" style="display:none" @change="onCoverChange" />
+            <el-button type="primary" plain @click="coverInput?.click()">选择图片</el-button>
+            <span v-if="form.coverImage" class="upload-name">{{ (form.coverImage as File).name }}</span>
+            <span v-else class="upload-tip">支持 jpg、png、webp，≤5MB</span>
           </div>
         </el-form-item>
 
@@ -154,6 +195,15 @@ function handleCancel() {
 .upload-tip {
   font-size: 12px;
   color: #9ca3af;
+}
+
+.upload-name {
+  font-size: 13px;
+  color: #374151;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .form-actions {

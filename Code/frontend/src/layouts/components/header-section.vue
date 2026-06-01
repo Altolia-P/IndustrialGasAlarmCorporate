@@ -8,7 +8,7 @@ import type { NavItem } from '@/data/navigation'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { isLoggedIn, isAdmin } = storeToRefs(authStore)
+const { isLoggedIn, isAdmin, isStaff } = storeToRefs(authStore)
 
 const mobileMenuOpen = ref(false)
 const activeDropdown = ref<string | null>(null)
@@ -41,7 +41,7 @@ function toggleMobileGroup(name: string) {
 
 function goLogin() {
   if (isLoggedIn.value) {
-    router.push(isAdmin.value ? '/admin' : '/user')
+    router.push(isAdmin.value ? '/admin' : isStaff.value ? '/staff' : '/user')
   } else {
     router.push('/login')
   }

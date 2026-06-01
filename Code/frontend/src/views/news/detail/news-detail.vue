@@ -1,62 +1,48 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { newsItems } from '@/data/home'
 import { contentApi } from '@/api/content'
-import { ContentType, ContentStatus } from '@/types/content'
-import type { ContentVO } from '@/types/content'
-import { useLoading } from '@/composables/use-loading'
+import { ContentType } from '@/types/content'
+import type { ContentDetailVO, ContentVO } from '@/types/content'
 
 const router = useRouter()
 const route = useRoute()
 
-const contentNews = ref<ContentVO[]>([])
-const { loading, start, stop } = useLoading()
+const news = ref<ContentDetailVO | null>(null)
+const relatedNews = ref<ContentVO[]>([])
+const loading = ref(false)
+const loadingRelated = ref(false)
 
-async function fetchNews() {
-  start()
+async function fetchDetail() {
+  loading.value = true
   try {
-    const page = await contentApi.getPublicList({ type: ContentType.NEWS, size: 100 })
-    contentNews.value = page.content.filter((c) => c.status === ContentStatus.PUBLISHED)
+    news.value = await contentApi.getPublicDetail(route.params.uuid as string)
   } catch {
-    contentNews.value = []
+    news.value = null
   } finally {
-    stop()
+    loading.value = false
+  }
+}
+
+async function fetchRelated() {
+  loadingRelated.value = true
+  try {
+    const page = await contentApi.getPublicList({ type: ContentType.NEWS, size: 4 })
+    relatedNews.value = page.content.filter((c) => c.contentUuid !== route.params.uuid).slice(0, 3)
+  } catch {
+    relatedNews.value = []
+  } finally {
+    loadingRelated.value = false
   }
 }
 
 onMounted(() => {
-  fetchNews()
+  fetchDetail()
+  fetchRelated()
 })
 
-const allNews = computed(() => {
-  const published = contentNews.value
-    .map((c, idx) => ({
-      id: 100000 + idx,
-      title: c.title,
-      category: c.categoryName,
-      date: c.createdAt,
-      summary: c.summary,
-      body: (c as Record<string, unknown>).body as string || c.summary
-    }))
-  return [...newsItems, ...published]
-})
-
-const news = computed(() => {
-  const id = Number(route.params.id)
-  return allNews.value.find((n) => n.id === id) || newsItems[0]
-})
-
-const relatedNews = computed(() => {
-  return allNews.value.filter((n) => n.id !== news.value.id).slice(0, 3)
-})
-
-const formattedBody = computed(() => {
-  return news.value.body.split('\n').filter((p) => p.trim()).map((p) => p.trim())
-})
-
-function goNewsDetail(id: number) {
-  router.push(`/news/${id}`)
+function goNewsDetail(uuid: string) {
+  router.push(`/news/${uuid}`)
 }
 
 function goBack() {
@@ -66,52 +52,67 @@ function goBack() {
 
 <template>
   <div class="news-detail-page">
-    <section class="hero-section">
-      <div class="container">
-        <div class="hero-breadcrumb">
-          <span class="breadcrumb-link" @click="goBack">首页</span>
-          <span class="breadcrumb-sep">/</span>
-          <span class="breadcrumb-link" @click="goBack">新闻动态</span>
-          <span class="breadcrumb-sep">/</span>
-          <span class="breadcrumb-current">{{ news.category }}</span>
-        </div>
-        <div class="hero-badge">{{ news.category }}</div>
-        <h1 class="page-title">{{ news.title }}</h1>
-        <div class="hero-meta">
-          <span class="meta-date">{{ news.date }}</span>
-        </div>
-      </div>
-    </section>
+    <div v-if="loading" class="loading-state">
+      <p>加载中...</p>
+    </div>
 
-    <section class="content-section">
-      <div class="container">
-        <div class="content-layout">
-          <article class="article-main">
-            <div class="article-body">
-              <p v-for="(paragraph, i) in formattedBody" :key="i" class="article-paragraph">{{ paragraph }}</p>
-            </div>
-          </article>
+    <div v-else-if="!news" class="error-state">
+      <p>新闻不存在或已删除</p>
+      <el-button size="large" round @click="goBack">返回首页</el-button>
+    </div>
 
-          <aside class="article-sidebar">
-            <div class="sidebar-block">
-              <h3 class="sidebar-title">相关新闻</h3>
-              <div class="related-list">
-                <div
-                  v-for="item in relatedNews"
-                  :key="item.id"
-                  class="related-item"
-                  @click="goNewsDetail(item.id)"
-                >
-                  <span class="related-category">{{ item.category }}</span>
-                  <h4 class="related-title">{{ item.title }}</h4>
-                  <span class="related-date">{{ item.date }}</span>
+    <template v-else>
+      <section class="hero-section">
+        <div class="container">
+          <div class="hero-breadcrumb">
+            <span class="breadcrumb-link" @click="goBack">首页</span>
+            <span class="breadcrumb-sep">/</span>
+            <span class="breadcrumb-link" @click="goBack">新闻动态</span>
+            <span class="breadcrumb-sep">/</span>
+            <span class="breadcrumb-current">{{ news.categoryName }}</span>
+          </div>
+          <div class="hero-badge">{{ news.categoryName }}</div>
+          <h1 class="page-title">{{ news.title }}</h1>
+          <div class="hero-meta">
+            <span class="meta-date">{{ news.createdAt }}</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-section">
+        <div class="container">
+          <div class="content-layout">
+            <article class="article-main">
+              <div class="article-body" v-html="news.body" />
+            </article>
+
+            <aside class="article-sidebar">
+              <div class="sidebar-block">
+                <h3 class="sidebar-title">相关新闻</h3>
+                <div v-if="loadingRelated" class="sidebar-loading">
+                  <p>加载中...</p>
+                </div>
+                <div v-else-if="relatedNews.length === 0" class="sidebar-empty">
+                  <p>暂无相关新闻</p>
+                </div>
+                <div v-else class="related-list">
+                  <div
+                    v-for="item in relatedNews"
+                    :key="item.contentUuid"
+                    class="related-item"
+                    @click="goNewsDetail(item.contentUuid)"
+                  >
+                    <span class="related-category">{{ item.categoryName }}</span>
+                    <h4 class="related-title">{{ item.title }}</h4>
+                    <span class="related-date">{{ item.createdAt }}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </aside>
+            </aside>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </template>
 
     <section class="back-section">
       <div class="container">
@@ -126,6 +127,18 @@ function goBack() {
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 24px;
+}
+
+.loading-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 24px;
+  color: var(--color-text-muted);
+  font-size: 15px;
+  gap: 16px;
 }
 
 .hero-section {
@@ -216,18 +229,22 @@ function goBack() {
 
 .article-body {
   max-width: 720px;
-}
-
-.article-paragraph {
   font-size: 16px;
   color: var(--color-gray-700);
   line-height: 1.9;
-  margin: 0 0 20px;
-  text-align: justify;
 }
 
-.article-paragraph:last-child {
+.article-body :deep(p) {
+  margin: 0 0 20px;
+}
+
+.article-body :deep(p:last-child) {
   margin-bottom: 0;
+}
+
+.article-body :deep(img) {
+  max-width: 100%;
+  border-radius: 8px;
 }
 
 .article-sidebar {
@@ -249,6 +266,14 @@ function goBack() {
   margin: 0 0 20px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--color-gray-200);
+}
+
+.sidebar-loading,
+.sidebar-empty {
+  color: var(--color-gray-400);
+  font-size: 14px;
+  text-align: center;
+  padding: 20px 0;
 }
 
 .related-list {
@@ -322,9 +347,6 @@ function goBack() {
   }
   .article-main {
     padding: 28px 20px;
-  }
-  .article-paragraph {
-    font-size: 15px;
   }
 }
 </style>

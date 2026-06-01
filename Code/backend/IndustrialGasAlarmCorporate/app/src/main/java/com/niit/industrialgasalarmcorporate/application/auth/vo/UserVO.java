@@ -7,5 +7,8 @@ public class UserVO {
 
     private String userUuid;
     private String username;
+    private String phone;
+    private String company;
+    private String lastLoginAt;
     private boolean locked;
 }

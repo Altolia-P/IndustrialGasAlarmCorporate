@@ -2,6 +2,7 @@ package com.niit.industrialgasalarmcorporate.domain.device;
 
 import com.niit.industrialgasalarmcorporate.common.base.Page;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,6 +18,8 @@ public interface DeviceRepository {
 
     Page<Device> findAllWithFilter(String customerUuid, String model, String gasType,
                                     String status, int page, int size);
+
+    List<Device> findByIds(Collection<String> deviceUuids);
 
     List<Device> findByCustomerUuid(String customerUuid);
 

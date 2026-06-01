@@ -17,4 +17,12 @@ public interface WorkOrderRepository {
     void save(WorkOrder workOrder);
 
     void deleteById(String workOrderUuid);
+
+    long countByStaffAndStatus(String staffUuid, WorkOrderStatus status);
+
+    long countByStatus(WorkOrderStatus status);
+
+    java.util.Map<WorkOrderStatus, Long> countGroupByStatus();
+
+    java.util.List<WorkOrder> findByCustomerPhone(String phone);
 }

@@ -1,8 +1,6 @@
 package com.niit.industrialgasalarmcorporate.application.auth.service.impl;
 
-import com.niit.industrialgasalarmcorporate.application.auth.dto.LoginDTO;
-import com.niit.industrialgasalarmcorporate.application.auth.dto.RegisterDTO;
-import com.niit.industrialgasalarmcorporate.application.auth.dto.ResetPasswordDTO;
+import com.niit.industrialgasalarmcorporate.application.auth.dto.*;
 import com.niit.industrialgasalarmcorporate.application.auth.service.AuthService;
 import com.niit.industrialgasalarmcorporate.application.auth.vo.CaptchaVO;
 import com.niit.industrialgasalarmcorporate.application.auth.vo.LoginResultVO;
@@ -44,7 +42,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtBlacklistRepository jwtBlacklistRepository;
 
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = {InvalidPasswordException.class, AccountLockedException.class})
     public LoginResultVO login(LoginDTO dto) {
         // Validate captcha if provided
         if (dto.getCaptcha() != null && dto.getCaptchaToken() != null) {
@@ -119,6 +117,30 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new UserNotFoundException(dto.getUsername()));
         user.changePassword(dto.getNewPassword(), passwordHasher);
         userRepository.save(user);
-        log.info("密码已重置: username={}, uuid={}", user.getUsername(), user.getUserUuid());
+        log.info("管理员重置密码: username={}, uuid={}", user.getUsername(), user.getUserUuid());
+    }
+
+    @Override
+    @Transactional
+    public void resetMyPassword(String userUuid, UserResetPasswordDTO dto) {
+        User user = userRepository.findById(userUuid)
+                .orElseThrow(() -> new UserNotFoundException(userUuid));
+        if (!passwordHasher.matches(dto.getOldPassword(), user.getPasswordHash())) {
+            throw new InvalidPasswordException("旧密码不正确");
+        }
+        user.changePassword(dto.getNewPassword(), passwordHasher);
+        userRepository.save(user);
+        log.info("用户自主修改密码: uuid={}", userUuid);
+    }
+
+    @Override
+    @Transactional
+    public UserVO updateProfile(String userUuid, UpdateProfileDTO dto) {
+        User user = userRepository.findById(userUuid)
+                .orElseThrow(() -> new UserNotFoundException(userUuid));
+        user.updateProfile(dto.getPhone(), dto.getCompany());
+        userRepository.save(user);
+        log.info("用户资料已更新: uuid={}", userUuid);
+        return UserAssembler.toVO(user);
     }
 }

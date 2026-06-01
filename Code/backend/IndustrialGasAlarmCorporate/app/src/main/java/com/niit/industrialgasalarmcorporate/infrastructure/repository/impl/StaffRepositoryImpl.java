@@ -31,6 +31,17 @@ public class StaffRepositoryImpl implements StaffRepository {
     }
 
     @Override
+    public Optional<Staff> findByUserUuid(String userUuid) {
+        LambdaQueryWrapper<StaffPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(StaffPO::getUserUuid, userUuid);
+        StaffPO po = staffMapper.selectOne(wrapper);
+        if (po == null) {
+            return Optional.empty();
+        }
+        return Optional.of(toDomain(po));
+    }
+
+    @Override
     public com.niit.industrialgasalarmcorporate.common.base.Page<Staff> findAllWithFilter(
             String name, String role, String status, int page, int size) {
         LambdaQueryWrapper<StaffPO> wrapper = new LambdaQueryWrapper<>();
@@ -72,6 +83,7 @@ public class StaffRepositoryImpl implements StaffRepository {
     private Staff toDomain(StaffPO po) {
         return new Staff(
                 po.getStaffUuid(),
+                po.getUserUuid(),
                 po.getName(),
                 po.getPhone(),
                 po.getEmail(),
@@ -84,6 +96,7 @@ public class StaffRepositoryImpl implements StaffRepository {
     private StaffPO toPO(Staff staff) {
         StaffPO po = new StaffPO();
         po.setStaffUuid(staff.getStaffUuid());
+        po.setUserUuid(staff.getUserUuid());
         po.setName(staff.getName());
         po.setPhone(staff.getPhone());
         po.setEmail(staff.getEmail());

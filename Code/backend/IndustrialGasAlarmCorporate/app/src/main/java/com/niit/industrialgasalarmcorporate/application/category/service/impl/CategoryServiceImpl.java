@@ -5,6 +5,8 @@ import com.niit.industrialgasalarmcorporate.application.category.dto.UpdateCateg
 import com.niit.industrialgasalarmcorporate.application.category.service.CategoryService;
 import com.niit.industrialgasalarmcorporate.application.category.vo.CategoryVO;
 import com.niit.industrialgasalarmcorporate.assembler.CategoryAssembler;
+import com.niit.industrialgasalarmcorporate.common.enums.ErrorCode;
+import com.niit.industrialgasalarmcorporate.common.exception.BusinessException;
 import com.niit.industrialgasalarmcorporate.common.exception.CategoryNotFoundException;
 import com.niit.industrialgasalarmcorporate.domain.category.Category;
 import com.niit.industrialgasalarmcorporate.domain.category.CategoryRepository;
@@ -43,6 +45,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryVO createCategory(CreateCategoryDTO dto) {
         CategoryType categoryType = CategoryType.valueOf(dto.getType());
+        validateParent(dto.getParentUuid());
         Category category = new Category(dto.getName(), categoryType, dto.getParentUuid(), dto.getSortOrder());
         categoryRepository.save(category);
         evictCache(dto.getType());
@@ -58,6 +61,9 @@ public class CategoryServiceImpl implements CategoryService {
         String name = dto.getName() != null ? dto.getName() : category.getName();
         CategoryType type = dto.getType() != null ? CategoryType.valueOf(dto.getType()) : category.getType();
         String parentUuid = dto.getParentUuid() != null ? dto.getParentUuid() : category.getParentUuid();
+        if (dto.getParentUuid() != null && !dto.getParentUuid().equals(category.getParentUuid())) {
+            validateParent(parentUuid);
+        }
         int sortOrder = dto.getSortOrder() != null ? dto.getSortOrder() : category.getSortOrder();
         category = new Category(categoryUuid, name, type, parentUuid, sortOrder);
         categoryRepository.save(category);
@@ -74,6 +80,14 @@ public class CategoryServiceImpl implements CategoryService {
         categoryRepository.delete(categoryUuid);
         evictCache(category.getType().name());
         log.info("分类已删除: uuid={}, name={}", categoryUuid, category.getName());
+    }
+
+    private void validateParent(String parentUuid) {
+        if (parentUuid != null && !parentUuid.isBlank()) {
+            if (categoryRepository.findById(parentUuid).isEmpty()) {
+                throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND, "父分类不存在");
+            }
+        }
     }
 
     private void evictCache(String type) {

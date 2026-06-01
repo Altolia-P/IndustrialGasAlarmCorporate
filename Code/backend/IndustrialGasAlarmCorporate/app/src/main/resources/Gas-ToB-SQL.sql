@@ -116,6 +116,7 @@ CREATE TABLE t_contact_message (
     content             TEXT         NOT NULL COMMENT '需求描述',
     ip                  VARCHAR(45)  NOT NULL COMMENT '提交IP',
     status              VARCHAR(20)  NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING / IN_PROGRESS / PROCESSED',
+    processor           VARCHAR(50)  NULL COMMENT '处理人',
     assigned_staff_uuid CHAR(36)     NULL COMMENT '指派员工UUID',
     assigned_staff_name VARCHAR(100) NULL COMMENT '指派员工姓名（冗余）',
     remark              VARCHAR(500) NULL COMMENT '处理备注',
@@ -377,6 +378,19 @@ CREATE TABLE t_notification (
     CHECK (channel IN ('IN_APP','SMS','EMAIL')),
     CHECK (status IN ('PENDING','SENT','DELIVERED','FAILED'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='通知记录表';
+
+CREATE TABLE t_download_file (
+    download_uuid CHAR(36)     PRIMARY KEY COMMENT '文件唯一标识',
+    display_name  VARCHAR(200) NOT NULL COMMENT '显示名称（下载页展示）',
+    original_name VARCHAR(200) NOT NULL COMMENT '原始文件名',
+    file_size     BIGINT       NOT NULL DEFAULT 0 COMMENT '文件大小（字节）',
+    content_type  VARCHAR(100) NOT NULL DEFAULT 'application/octet-stream' COMMENT 'MIME 类型',
+    stored_path   VARCHAR(500) NOT NULL COMMENT '存储路径',
+    version       INT          NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+    deleted       TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='下载文件表';
 
 -- ============================================================
 -- 示例数据 (Seed Data)

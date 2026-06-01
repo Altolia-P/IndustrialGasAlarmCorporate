@@ -8,6 +8,8 @@ public interface StaffRepository {
 
     Optional<Staff> findById(String staffUuid);
 
+    Optional<Staff> findByUserUuid(String userUuid);
+
     Page<Staff> findAllWithFilter(String name, String role, String status, int page, int size);
 
     void save(Staff staff);

@@ -11,6 +11,10 @@ import com.niit.industrialgasalarmcorporate.domain.alert.AlertSeverity;
 import com.niit.industrialgasalarmcorporate.domain.alert.AlertStatus;
 import com.niit.industrialgasalarmcorporate.domain.device.DeviceRepository;
 import com.niit.industrialgasalarmcorporate.domain.device.DeviceStatus;
+import com.niit.industrialgasalarmcorporate.domain.message.MessageRepository;
+import com.niit.industrialgasalarmcorporate.domain.message.MessageStatus;
+import com.niit.industrialgasalarmcorporate.domain.workorder.WorkOrderRepository;
+import com.niit.industrialgasalarmcorporate.domain.workorder.WorkOrderStatus;
 import com.niit.industrialgasalarmcorporate.infrastructure.redis.DashboardCacheRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,6 +34,8 @@ public class DashboardServiceImpl implements DashboardService {
 
     private final DeviceRepository deviceRepository;
     private final AlertRepository alertRepository;
+    private final MessageRepository messageRepository;
+    private final WorkOrderRepository workOrderRepository;
     private final DashboardCacheRepository dashboardCacheRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper()
@@ -74,6 +81,15 @@ public class DashboardServiceImpl implements DashboardService {
         long warning = alertRepository.countBySeverity(AlertSeverity.WARNING);
         long info = alertRepository.countBySeverity(AlertSeverity.INFO);
         stats.setTotalAlerts((int) (critical + warning + info));
+
+        stats.setPendingMessages((int) messageRepository.countByStatus(MessageStatus.PENDING));
+        stats.setPendingWorkOrders((int) workOrderRepository.countByStatus(WorkOrderStatus.PENDING));
+        stats.setInProgressWorkOrders((int) workOrderRepository.countByStatus(WorkOrderStatus.IN_PROGRESS));
+
+        Map<WorkOrderStatus, Long> woDistribution = workOrderRepository.countGroupByStatus();
+        Map<String, Long> statusMap = new LinkedHashMap<>();
+        woDistribution.forEach((k, v) -> statusMap.put(k.name(), v));
+        stats.setWorkOrderStatusDistribution(statusMap);
 
         LocalDate today = LocalDate.now();
         LocalDate sevenDaysAgo = today.minusDays(6);

@@ -8,6 +8,7 @@ import com.niit.industrialgasalarmcorporate.assembler.DeviceAssembler;
 import com.niit.industrialgasalarmcorporate.common.base.Page;
 import com.niit.industrialgasalarmcorporate.common.enums.ErrorCode;
 import com.niit.industrialgasalarmcorporate.common.exception.BusinessException;
+import com.niit.industrialgasalarmcorporate.domain.auth.UserRepository;
 import com.niit.industrialgasalarmcorporate.domain.device.Device;
 import com.niit.industrialgasalarmcorporate.domain.device.DeviceRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 public class DeviceServiceImpl implements DeviceService {
 
     private final DeviceRepository deviceRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -29,7 +31,9 @@ public class DeviceServiceImpl implements DeviceService {
         Page<Device> domainPage = deviceRepository.findAllWithFilter(
                 customerUuid, model, gasType, status, page, size);
         return new Page<>(
-                domainPage.getContent().stream().map(DeviceAssembler::toVO).collect(Collectors.toList()),
+                domainPage.getContent().stream()
+                        .map(d -> enrich(DeviceAssembler.toVO(d)))
+                        .collect(Collectors.toList()),
                 domainPage.getTotalElements(),
                 domainPage.getSize(),
                 domainPage.getNumber()
@@ -41,7 +45,7 @@ public class DeviceServiceImpl implements DeviceService {
     public DeviceVO getDevice(String deviceUuid) {
         Device device = deviceRepository.findById(deviceUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
-        return DeviceAssembler.toVO(device);
+        return enrich(DeviceAssembler.toVO(device));
     }
 
     @Override
@@ -52,7 +56,7 @@ public class DeviceServiceImpl implements DeviceService {
         }
         Device device = DeviceAssembler.toEntity(dto);
         deviceRepository.save(device);
-        return DeviceAssembler.toVO(device);
+        return enrich(DeviceAssembler.toVO(device));
     }
 
     @Override
@@ -62,7 +66,7 @@ public class DeviceServiceImpl implements DeviceService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
         DeviceAssembler.updateEntity(device, dto);
         deviceRepository.save(device);
-        return DeviceAssembler.toVO(device);
+        return enrich(DeviceAssembler.toVO(device));
     }
 
     @Override
@@ -117,5 +121,16 @@ public class DeviceServiceImpl implements DeviceService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
         device.endMaintenance();
         deviceRepository.save(device);
+    }
+
+    private DeviceVO enrich(DeviceVO vo) {
+        String customerUuid = vo.getCustomerUuid();
+        if (customerUuid != null && !customerUuid.isBlank()) {
+            userRepository.findById(customerUuid).ifPresent(user -> {
+                vo.setCustomerName(user.getCompany());
+                vo.setCustomerPhone(user.getPhone());
+            });
+        }
+        return vo;
     }
 }

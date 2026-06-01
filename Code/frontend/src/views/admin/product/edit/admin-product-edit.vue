@@ -1,33 +1,66 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ProductStatus } from '@/types/product'
 import { productApi } from '@/api/product'
+import { categoryApi } from '@/api/category'
+import { CategoryType } from '@/types/category'
 
 const router = useRouter()
 const route = useRoute()
 
 const isEdit = ref(!!route.params.uuid)
+const loading = ref(false)
 
 const form = reactive({
   name: '',
   categoryUuid: '',
   description: '',
-  status: 'DRAFT',
+  status: ProductStatus.DRAFT,
   coverImage: null as File | null,
   images: [] as File[],
   attributes: [] as { attrKey: string; attrVal: string }[]
 })
 
-const categories = ref([
-  { categoryUuid: '1', name: '气体检测仪' },
-  { categoryUuid: '2', name: '控制系统' },
-  { categoryUuid: '3', name: '传感器' },
-  { categoryUuid: '4', name: '火灾报警' }
-])
+const categories = ref<{ categoryUuid: string; name: string }[]>([])
 
 const submitting = ref(false)
+const coverInput = ref<HTMLInputElement | null>(null)
+const imagesInput = ref<HTMLInputElement | null>(null)
+
+async function fetchCategories() {
+  try {
+    categories.value = await categoryApi.getAdminCategories(CategoryType.PRODUCT_CATEGORY)
+  } catch {
+    // categories remain empty
+  }
+}
+
+async function fetchProduct() {
+  loading.value = true
+  try {
+    const detail = await productApi.getAdminDetail(route.params.uuid as string)
+    form.name = detail.name
+    form.categoryUuid = detail.categoryUuid
+    form.description = detail.description || ''
+    form.status = detail.status
+    form.attributes = detail.attributes ? detail.attributes.map(a => ({ attrKey: a.attrKey, attrVal: a.attrVal })) : []
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    ElMessage.error(err.message || '加载产品数据失败')
+    router.push('/admin/products')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchCategories()
+  if (isEdit.value) {
+    fetchProduct()
+  }
+})
 
 function handleCoverChange(file: File) {
   form.coverImage = file
@@ -35,6 +68,20 @@ function handleCoverChange(file: File) {
 
 function handleImagesChange(files: File[]) {
   form.images = files
+}
+
+function onCoverChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  if (input.files && input.files[0]) {
+    handleCoverChange(input.files[0])
+  }
+}
+
+function onImagesChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  if (input.files) {
+    handleImagesChange(Array.from(input.files))
+  }
 }
 
 function addAttribute() {
@@ -85,10 +132,10 @@ function handleCancel() {
 
 <template>
   <div class="admin-product-edit">
-    <div class="form-card">
+    <div class="form-card" v-loading="loading">
       <h2 class="form-title">{{ isEdit ? '编辑产品' : '新增产品' }}</h2>
 
-      <el-form :model="form" label-width="100px" class="edit-form">
+      <el-form v-if="!loading" :model="form" label-width="100px" class="edit-form">
         <el-form-item label="产品名称" required>
           <el-input v-model="form.name" placeholder="请输入产品名称" />
         </el-form-item>
@@ -112,14 +159,17 @@ function handleCancel() {
 
         <el-form-item label="封面图片">
           <div class="upload-area">
-            <el-button type="primary" plain>选择图片</el-button>
-            <span class="upload-tip">支持 jpg、png、webp，≤5MB</span>
+            <input ref="coverInput" type="file" accept="image/jpeg,image/png,image/webp" style="display:none" @change="onCoverChange" />
+            <el-button type="primary" plain @click="coverInput?.click()">选择图片</el-button>
+            <span v-if="form.coverImage" class="upload-name">{{ (form.coverImage as File).name }}</span>
+            <span v-else class="upload-tip">支持 jpg、png、webp，≤5MB</span>
           </div>
         </el-form-item>
 
         <el-form-item label="产品图片">
           <div class="upload-area">
-            <el-button type="primary" plain>选择图片</el-button>
+            <input ref="imagesInput" type="file" accept="image/jpeg,image/png,image/webp" multiple style="display:none" @change="onImagesChange" />
+            <el-button type="primary" plain @click="imagesInput?.click()">选择图片</el-button>
             <span class="upload-tip">支持多张，单张≤5MB</span>
           </div>
         </el-form-item>
@@ -182,6 +232,15 @@ function handleCancel() {
 .upload-tip {
   font-size: 12px;
   color: #9ca3af;
+}
+
+.upload-name {
+  font-size: 13px;
+  color: #374151;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .attributes-area {

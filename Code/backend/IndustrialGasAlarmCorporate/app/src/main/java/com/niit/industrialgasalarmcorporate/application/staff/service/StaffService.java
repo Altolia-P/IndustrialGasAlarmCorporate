@@ -2,6 +2,7 @@ package com.niit.industrialgasalarmcorporate.application.staff.service;
 
 import com.niit.industrialgasalarmcorporate.application.staff.dto.CreateStaffDTO;
 import com.niit.industrialgasalarmcorporate.application.staff.dto.UpdateStaffDTO;
+import com.niit.industrialgasalarmcorporate.application.staff.dto.UpdateStaffProfileDTO;
 import com.niit.industrialgasalarmcorporate.application.staff.vo.StaffVO;
 import com.niit.industrialgasalarmcorporate.common.base.Page;
 
@@ -16,4 +17,8 @@ public interface StaffService {
     StaffVO updateStaff(String staffUuid, UpdateStaffDTO dto);
 
     void deleteStaff(String staffUuid);
+
+    StaffVO getMyProfile(String userUuid);
+
+    StaffVO updateMyProfile(String userUuid, UpdateStaffProfileDTO dto);
 }

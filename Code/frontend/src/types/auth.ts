@@ -37,5 +37,13 @@ export interface ResetPasswordDTO {
 export interface UserVO {
   userUuid: string
   username: string
+  phone?: string
+  company?: string
+  lastLoginAt?: string
   locked: boolean
+}
+
+export interface UpdateProfileDTO {
+  phone: string
+  company?: string
 }

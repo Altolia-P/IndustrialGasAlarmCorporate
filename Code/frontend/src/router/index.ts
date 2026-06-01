@@ -68,7 +68,7 @@ const router = createRouter({
           component: () => import('@/views/contact/contact.vue')
         },
         {
-          path: 'news/:id',
+          path: 'news/:uuid',
           name: 'NewsDetail',
           meta: { title: '新闻详情' },
           component: () => import('@/views/news/detail/news-detail.vue')
@@ -284,6 +284,90 @@ const router = createRouter({
           name: 'AdminNewsEdit',
           meta: { title: '编辑新闻', requiresAuth: true, requiresAdmin: true },
           component: () => import('@/views/admin/news/edit/admin-news-edit.vue')
+        },
+        {
+          path: 'devices',
+          name: 'AdminDevices',
+          meta: { title: '设备管理', requiresAuth: true, requiresAdmin: true },
+          component: () => import('@/views/admin/device/list/admin-device-list.vue')
+        },
+        {
+          path: 'devices/create',
+          name: 'AdminDeviceCreate',
+          meta: { title: '新增设备', requiresAuth: true, requiresAdmin: true },
+          component: () => import('@/views/admin/device/edit/admin-device-edit.vue')
+        },
+        {
+          path: 'devices/:uuid',
+          name: 'AdminDeviceDetail',
+          meta: { title: '设备详情', requiresAuth: true, requiresAdmin: true },
+          component: () => import('@/views/admin/device/detail/admin-device-detail.vue')
+        },
+        {
+          path: 'devices/:uuid/edit',
+          name: 'AdminDeviceEdit',
+          meta: { title: '编辑设备', requiresAuth: true, requiresAdmin: true },
+          component: () => import('@/views/admin/device/edit/admin-device-edit.vue')
+        },
+        {
+          path: 'alert-rules',
+          name: 'AdminAlertRules',
+          meta: { title: '报警规则', requiresAuth: true, requiresAdmin: true },
+          component: () => import('@/views/admin/alert-rule/list/admin-alert-rule-list.vue')
+        },
+        {
+          path: 'alert-rules/create',
+          name: 'AdminAlertRuleCreate',
+          meta: { title: '新增规则', requiresAuth: true, requiresAdmin: true },
+          component: () => import('@/views/admin/alert-rule/edit/admin-alert-rule-edit.vue')
+        },
+        {
+          path: 'alert-rules/:uuid/edit',
+          name: 'AdminAlertRuleEdit',
+          meta: { title: '编辑规则', requiresAuth: true, requiresAdmin: true },
+          component: () => import('@/views/admin/alert-rule/edit/admin-alert-rule-edit.vue')
+        },
+        {
+          path: 'alerts',
+          name: 'AdminAlerts',
+          meta: { title: '报警记录', requiresAuth: true, requiresAdmin: true },
+          component: () => import('@/views/admin/alert/list/admin-alert-list.vue')
+        },
+        {
+          path: 'alerts/:uuid',
+          name: 'AdminAlertDetail',
+          meta: { title: '报警详情', requiresAuth: true, requiresAdmin: true },
+          component: () => import('@/views/admin/alert/detail/admin-alert-detail.vue')
+        },
+        {
+          path: 'notifications',
+          name: 'AdminNotifications',
+          meta: { title: '通知记录', requiresAuth: true, requiresAdmin: true },
+          component: () => import('@/views/admin/notification/admin-notification-list.vue')
+        },
+        {
+          path: 'customers/360',
+          name: 'AdminCustomer360',
+          meta: { title: '客户全景视图', requiresAuth: true, requiresAdmin: true },
+          component: () => import('@/views/admin/customer/admin-customer-360.vue')
+        },
+        {
+          path: 'system-config',
+          name: 'AdminSystemConfig',
+          meta: { title: '系统配置', requiresAuth: true, requiresAdmin: true },
+          component: () => import('@/views/admin/system-config/admin-system-config.vue')
+        },
+        {
+          path: 'downloads',
+          name: 'AdminDownloads',
+          meta: { title: '下载中心管理', requiresAuth: true, requiresAdmin: true },
+          component: () => import('@/views/admin/download/admin-download-list.vue')
+        },
+        {
+          path: 'operation-logs',
+          name: 'AdminOperationLogs',
+          meta: { title: '操作日志', requiresAuth: true, requiresAdmin: true },
+          component: () => import('@/views/admin/operation-log/admin-operation-log.vue')
         }
       ]
     }

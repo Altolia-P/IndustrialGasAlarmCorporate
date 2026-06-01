@@ -21,4 +21,10 @@ public class AlertVO {
     private String resolvedBy;
     private String workOrderUuid;
     private String createdAt;
+
+    private String deviceName;
+    private String deviceSerialNumber;
+    private String customerUuid;
+    private String customerName;
+    private String customerPhone;
 }

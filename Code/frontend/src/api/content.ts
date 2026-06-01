@@ -19,6 +19,9 @@ export const contentApi = {
   getPublicDetail(uuid: string): Promise<ContentDetailVO> {
     return request.get(`/public/contents/${uuid}`)
   },
+  getAdminDetail(uuid: string): Promise<ContentDetailVO> {
+    return request.get(`/admin/contents/${uuid}`)
+  },
   getAdminList(params: {
     title?: string
     type?: ContentType
@@ -44,5 +47,8 @@ export const contentApi = {
   },
   publish(uuid: string): Promise<null> {
     return request.post(`/admin/contents/${uuid}/publish`)
+  },
+  unpublish(uuid: string): Promise<null> {
+    return request.post(`/admin/contents/${uuid}/unpublish`)
   }
 }

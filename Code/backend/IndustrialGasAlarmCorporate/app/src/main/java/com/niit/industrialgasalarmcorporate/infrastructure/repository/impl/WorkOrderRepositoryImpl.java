@@ -99,6 +99,40 @@ public class WorkOrderRepositoryImpl implements WorkOrderRepository {
         workOrderMapper.deleteById(workOrderUuid);
     }
 
+    @Override
+    public long countByStaffAndStatus(String staffUuid, WorkOrderStatus status) {
+        LambdaQueryWrapper<WorkOrderPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(WorkOrderPO::getAssignedStaffUuid, staffUuid)
+                .eq(WorkOrderPO::getStatus, status.name());
+        return workOrderMapper.selectCount(wrapper);
+    }
+
+    @Override
+    public long countByStatus(WorkOrderStatus status) {
+        LambdaQueryWrapper<WorkOrderPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(WorkOrderPO::getStatus, status.name());
+        return workOrderMapper.selectCount(wrapper);
+    }
+
+    @Override
+    public java.util.Map<WorkOrderStatus, Long> countGroupByStatus() {
+        java.util.Map<WorkOrderStatus, Long> map = new java.util.LinkedHashMap<>();
+        for (WorkOrderStatus status : WorkOrderStatus.values()) {
+            map.put(status, countByStatus(status));
+        }
+        return map;
+    }
+
+    @Override
+    public List<WorkOrder> findByCustomerPhone(String phone) {
+        LambdaQueryWrapper<WorkOrderPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(WorkOrderPO::getCustomerPhone, phone)
+                .orderByDesc(WorkOrderPO::getCreatedAt);
+        return workOrderMapper.selectList(wrapper).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
     private WorkOrder toDomain(WorkOrderPO po) {
         return new WorkOrder(
                 po.getWorkOrderUuid(),

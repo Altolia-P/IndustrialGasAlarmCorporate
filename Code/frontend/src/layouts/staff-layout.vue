@@ -2,6 +2,8 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import NotificationBell from '@/components/NotificationBell.vue'
+import { staffNotifyApi } from '@/api/staff'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -79,6 +81,9 @@ function handleLogout() {
         <div class="header-left">
           <router-link to="/" class="back-home">← 返回首页</router-link>
           <h2>{{ sidebarCollapsed ? authStore.username : ($route.meta.title || '员工工作台') }}</h2>
+        </div>
+        <div class="header-right">
+          <NotificationBell :api="staffNotifyApi" view-all-route="/staff/notifications" />
         </div>
       </header>
       <main class="dashboard-main">

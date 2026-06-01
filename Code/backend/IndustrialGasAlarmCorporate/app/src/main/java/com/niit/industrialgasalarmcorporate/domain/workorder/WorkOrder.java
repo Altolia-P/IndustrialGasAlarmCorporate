@@ -76,6 +76,9 @@ public class WorkOrder {
     public void update(String title, WorkOrderType type, String description, WorkOrderPriority priority,
                        String customerName, String customerPhone,
                        String assignedStaffUuid, String assignedStaffName, String resolution) {
+        if (this.status == WorkOrderStatus.COMPLETED) {
+            throw new IllegalStateException("已完成的工单不能修改");
+        }
         if (title != null && !title.isBlank()) {
             this.title = title;
         }
@@ -106,6 +109,9 @@ public class WorkOrder {
     }
 
     public void assign(String staffUuid, String staffName) {
+        if (this.status == WorkOrderStatus.COMPLETED) {
+            throw new IllegalStateException("已完成的工单不能重新分配");
+        }
         this.assignedStaffUuid = staffUuid;
         this.assignedStaffName = staffName;
         if (this.status == WorkOrderStatus.PENDING) {
@@ -114,6 +120,9 @@ public class WorkOrder {
     }
 
     public void complete(String resolution) {
+        if (this.status == WorkOrderStatus.COMPLETED) {
+            throw new IllegalStateException("工单已完成，不能重复完成");
+        }
         this.resolution = resolution;
         this.status = WorkOrderStatus.COMPLETED;
         this.completedAt = LocalDateTime.now();

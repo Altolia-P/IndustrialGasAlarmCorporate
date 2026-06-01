@@ -56,6 +56,38 @@ public class NotificationRepositoryImpl implements NotificationRepository {
                 notifications, result.getTotal(), (int) result.getSize(), (int) result.getCurrent());
     }
 
+    @Override
+    public com.niit.industrialgasalarmcorporate.common.base.Page<Notification> findAll(int page, int size) {
+        LambdaQueryWrapper<NotificationPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(NotificationPO::getCreatedAt);
+        Page<NotificationPO> mpPage = new Page<>(page, size);
+        Page<NotificationPO> result = notificationMapper.selectPage(mpPage, wrapper);
+        List<Notification> notifications = result.getRecords().stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+        return new com.niit.industrialgasalarmcorporate.common.base.Page<>(
+                notifications, result.getTotal(), (int) result.getSize(), (int) result.getCurrent());
+    }
+
+    @Override
+    public long countByChannelAndCreatedAfter(NotificationChannel channel, java.time.LocalDateTime since) {
+        LambdaQueryWrapper<NotificationPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(NotificationPO::getChannel, channel.name())
+                .gt(NotificationPO::getCreatedAt, since);
+        return notificationMapper.selectCount(wrapper);
+    }
+
+    @Override
+    public List<Notification> findRecentByChannel(NotificationChannel channel, int limit) {
+        LambdaQueryWrapper<NotificationPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(NotificationPO::getChannel, channel.name())
+                .orderByDesc(NotificationPO::getCreatedAt)
+                .last("LIMIT " + limit);
+        return notificationMapper.selectList(wrapper).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
     private Notification toDomain(NotificationPO po) {
         return new Notification(
                 po.getNotificationUuid(),

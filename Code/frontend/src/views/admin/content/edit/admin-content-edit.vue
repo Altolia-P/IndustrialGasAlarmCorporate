@@ -1,30 +1,65 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ContentType, ContentStatus } from '@/types/content'
 import { contentApi } from '@/api/content'
+import { categoryApi } from '@/api/category'
+import { CategoryType } from '@/types/category'
 
 const router = useRouter()
 const route = useRoute()
 
 const isEdit = ref(!!route.params.uuid)
+const loading = ref(false)
+const pageType = (route.query.type as string) || ContentType.SOLUTION
 
 const form = reactive({
   title: '',
-  type: ContentType.SOLUTION,
+  type: pageType,
   categoryUuid: '',
-  categoryName: '解决方案',
   body: '',
   coverImage: null as File | null,
   status: ContentStatus.DRAFT
 })
 
-const categories = ref([
-  { categoryUuid: '1', name: '解决方案' }
-])
+const categories = ref<{ categoryUuid: string; name: string }[]>([])
 
 const submitting = ref(false)
+const coverInput = ref<HTMLInputElement | null>(null)
+
+async function fetchCategories() {
+  try {
+    categories.value = await categoryApi.getAdminCategories(CategoryType.CONTENT_CATEGORY)
+  } catch {
+    // categories remain empty
+  }
+}
+
+async function fetchContent() {
+  loading.value = true
+  try {
+    const detail = await contentApi.getAdminDetail(route.params.uuid as string)
+    form.title = detail.title
+    form.type = detail.type
+    form.categoryUuid = detail.categoryUuid
+    form.body = detail.body || ''
+    form.status = detail.status
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    ElMessage.error(err.message || '加载内容数据失败')
+    router.push('/admin/contents')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchCategories()
+  if (isEdit.value) {
+    fetchContent()
+  }
+})
 
 async function handleSubmit() {
   if (!form.title || !form.categoryUuid) {
@@ -55,6 +90,13 @@ async function handleSubmit() {
   }
 }
 
+function onCoverChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  if (input.files && input.files[0]) {
+    form.coverImage = input.files[0]
+  }
+}
+
 function handleCancel() {
   router.push('/admin/contents')
 }
@@ -62,10 +104,10 @@ function handleCancel() {
 
 <template>
   <div class="admin-content-edit">
-    <div class="form-card">
+    <div class="form-card" v-loading="loading">
       <h2 class="form-title">{{ isEdit ? '编辑内容' : '新增内容' }}</h2>
 
-      <el-form :model="form" label-width="100px" class="edit-form">
+      <el-form v-if="!loading" :model="form" label-width="100px" class="edit-form">
         <el-form-item label="标题" required>
           <el-input v-model="form.title" placeholder="请输入标题" />
         </el-form-item>
@@ -82,8 +124,10 @@ function handleCancel() {
 
         <el-form-item label="封面图片">
           <div class="upload-area">
-            <el-button type="primary" plain>选择图片</el-button>
-            <span class="upload-tip">支持 jpg、png、webp，≤5MB</span>
+            <input ref="coverInput" type="file" accept="image/jpeg,image/png,image/webp" style="display:none" @change="onCoverChange" />
+            <el-button type="primary" plain @click="coverInput?.click()">选择图片</el-button>
+            <span v-if="form.coverImage" class="upload-name">{{ (form.coverImage as File).name }}</span>
+            <span v-else class="upload-tip">支持 jpg、png、webp，≤5MB</span>
           </div>
         </el-form-item>
 
@@ -141,6 +185,15 @@ function handleCancel() {
 .upload-tip {
   font-size: 12px;
   color: #9ca3af;
+}
+
+.upload-name {
+  font-size: 13px;
+  color: #374151;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .form-actions {

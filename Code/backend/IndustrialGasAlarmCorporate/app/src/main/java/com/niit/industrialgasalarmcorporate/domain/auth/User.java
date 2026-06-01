@@ -82,6 +82,11 @@ public class User {
         this.passwordHash = passwordHasher.hash(newRawPassword);
     }
 
+    public void updateProfile(String phone, String company) {
+        this.phone = phone;
+        this.company = company;
+    }
+
     private void incrementFailCount() {
         this.failCount++;
         if (this.failCount >= MAX_FAIL_COUNT) {

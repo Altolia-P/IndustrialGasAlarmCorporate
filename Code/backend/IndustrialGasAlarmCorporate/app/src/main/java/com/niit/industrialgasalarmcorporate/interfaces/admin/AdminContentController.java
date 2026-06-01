@@ -3,6 +3,7 @@ package com.niit.industrialgasalarmcorporate.interfaces.admin;
 import com.niit.industrialgasalarmcorporate.application.content.dto.CreateContentDTO;
 import com.niit.industrialgasalarmcorporate.application.content.dto.UpdateContentDTO;
 import com.niit.industrialgasalarmcorporate.application.content.service.ContentService;
+import com.niit.industrialgasalarmcorporate.application.content.vo.ContentDetailVO;
 import com.niit.industrialgasalarmcorporate.application.content.vo.ContentVO;
 import com.niit.industrialgasalarmcorporate.common.base.Page;
 import com.niit.industrialgasalarmcorporate.common.base.Result;
@@ -40,6 +41,11 @@ public class AdminContentController {
             dto.setCoverImage(fileStorageService.store(coverImage));
         }
         return Result.ok("新增成功", contentService.createContent(dto));
+    }
+
+    @GetMapping("/contents/{uuid}")
+    public Result<ContentDetailVO> getContent(@PathVariable String uuid) {
+        return Result.ok(contentService.getContent(uuid));
     }
 
     @GetMapping("/contents")

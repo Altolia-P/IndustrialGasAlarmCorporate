@@ -9,4 +9,12 @@ public interface NotificationService {
     void notifyAlert(AlertCreatedEvent event);
 
     Page<NotificationVO> findByAlertUuid(String alertUuid, int page, int size);
+
+    Page<NotificationVO> listAll(int page, int size);
+
+    void resend(String notificationUuid);
+
+    long getUnreadCount(java.time.LocalDateTime since);
+
+    java.util.List<NotificationVO> getRecent(int limit);
 }

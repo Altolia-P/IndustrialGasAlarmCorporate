@@ -19,5 +19,11 @@ public class DashboardStatsVO {
     private int criticalAlerts;
     private int warningAlerts;
 
+    private int pendingMessages;
+    private int pendingWorkOrders;
+    private int inProgressWorkOrders;
+
+    private java.util.Map<String, Long> workOrderStatusDistribution;
+
     private List<AlertTrendItem> alertTrend;
 }

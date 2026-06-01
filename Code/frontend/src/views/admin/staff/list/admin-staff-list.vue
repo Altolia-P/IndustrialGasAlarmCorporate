@@ -7,6 +7,7 @@ import { staffApi } from '@/api/staff'
 import type { StaffVO } from '@/types/staff'
 import { useLoading } from '@/composables/use-loading'
 import { usePagination } from '@/composables/use-pagination'
+import { useExport } from '@/composables/use-export'
 
 const router = useRouter()
 
@@ -20,6 +21,7 @@ const statusTagType: Record<string, string> = {
 const staff = ref<StaffVO[]>([])
 const { loading, start, stop } = useLoading()
 const { state: pagination, backendPage, setTotal, goToPage } = usePagination()
+const { exportToExcel } = useExport()
 
 const searchForm = ref({ name: '', role: '', status: '' })
 
@@ -68,6 +70,28 @@ async function handleDelete(uuid: string) {
   }
 }
 
+const staffExportCols = [
+  { header: '姓名', key: 'name' },
+  { header: '岗位', key: 'role' },
+  { header: '工作状态', key: 'status' },
+  { header: '联系电话', key: 'phone' },
+  { header: '电子邮箱', key: 'email' },
+  { header: '入职日期', key: 'createdAt' }
+]
+
+async function handleExport() {
+  const params: Record<string, unknown> = {}
+  if (searchForm.value.name) params.name = searchForm.value.name
+  if (searchForm.value.role) params.role = searchForm.value.role
+  if (searchForm.value.status) params.status = searchForm.value.status
+  await exportToExcel(
+    (p) => staffApi.getAdminList(p),
+    params,
+    staffExportCols,
+    '员工列表'
+  )
+}
+
 function handleSearch() {
   goToPage(1)
   fetchStaff()
@@ -96,6 +120,7 @@ function handlePageChange(page: number) {
         <el-button type="primary" @click="handleSearch">搜索</el-button>
       </div>
       <el-button type="primary" @click="handleCreate">新增员工</el-button>
+        <el-button @click="handleExport">导出Excel</el-button>
     </div>
 
     <div v-if="loading" class="loading-state">

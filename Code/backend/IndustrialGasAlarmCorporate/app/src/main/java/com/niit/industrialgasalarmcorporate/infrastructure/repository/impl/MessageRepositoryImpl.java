@@ -105,6 +105,21 @@ public class MessageRepositoryImpl implements MessageRepository {
         return new Page<>(messages, result.getTotal(), (int) result.getSize(), (int) result.getCurrent());
     }
 
+    @Override
+    public long countByStaffAndStatus(String staffUuid, MessageStatus status) {
+        LambdaQueryWrapper<ContactMessagePO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ContactMessagePO::getAssignedStaffUuid, staffUuid)
+                .eq(ContactMessagePO::getStatus, status.name());
+        return contactMessageMapper.selectCount(wrapper);
+    }
+
+    @Override
+    public long countByStatus(MessageStatus status) {
+        LambdaQueryWrapper<ContactMessagePO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ContactMessagePO::getStatus, status.name());
+        return contactMessageMapper.selectCount(wrapper);
+    }
+
     private ContactMessage toDomain(ContactMessagePO po) {
         return new ContactMessage(
                 po.getMessageUuid(),

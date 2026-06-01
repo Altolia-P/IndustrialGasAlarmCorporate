@@ -3,6 +3,8 @@ import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
 import { workOrderApi } from '@/api/workorder'
+import { commentApi } from '@/api/comment'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import { WorkOrderStatus, WorkOrderStatusMap, WorkOrderPriority, WorkOrderPriorityMap } from '@/types/workorder'
 import type { WorkOrderVO } from '@/types/workorder'
 import { useFormSubmit } from '@/composables/use-form-submit'
@@ -25,7 +27,7 @@ const priorityOptions = [
 
 const { loading: submitting, submit: doSubmit } = useFormSubmit(
   (dto: { title: string; type: string; description: string; priority: string; customerName: string; customerPhone: string }) =>
-    workOrderApi.create(dto),
+    workOrderApi.createByUser(dto),
   {
     successMsg: '工单已提交，我们会尽快处理',
     onSuccess: () => {
@@ -86,6 +88,14 @@ const priorityTagType: Record<string, string> = {
   [WorkOrderPriority.MEDIUM]: 'warning',
   [WorkOrderPriority.LOW]: 'info'
 }
+
+const detailDialogVisible = ref(false)
+const detailTicket = ref<WorkOrderVO | null>(null)
+
+function openDetail(ticket: WorkOrderVO) {
+  detailTicket.value = ticket
+  detailDialogVisible.value = true
+}
 </script>
 
 <template>
@@ -135,7 +145,7 @@ const priorityTagType: Record<string, string> = {
     </div>
 
     <div v-else class="ticket-list">
-      <div v-for="ticket in tickets" :key="ticket.workOrderUuid" class="ticket-card">
+      <div v-for="ticket in tickets" :key="ticket.workOrderUuid" class="ticket-card" @click="openDetail(ticket)">
         <div class="ticket-header">
           <div class="ticket-left">
             <el-tag :type="priorityTagType[ticket.priority]" size="small" class="ticket-priority">
@@ -165,6 +175,29 @@ const priorityTagType: Record<string, string> = {
         </div>
       </div>
     </div>
+
+    <el-dialog v-model="detailDialogVisible" title="工单详情" width="640px" @closed="detailTicket = null">
+      <template v-if="detailTicket">
+        <div class="detail-info">
+          <div class="detail-row"><span class="detail-label">标题：</span>{{ detailTicket.title }}</div>
+          <div class="detail-row"><span class="detail-label">类型：</span>{{ detailTicket.type }}</div>
+          <div class="detail-row"><span class="detail-label">优先级：</span>
+            <el-tag :type="priorityTagType[detailTicket.priority]" size="small">{{ WorkOrderPriorityMap[detailTicket.priority as WorkOrderPriority] }}</el-tag>
+          </div>
+          <div class="detail-row"><span class="detail-label">状态：</span>
+            <el-tag :type="statusTagType[detailTicket.status]" size="small">{{ WorkOrderStatusMap[detailTicket.status as WorkOrderStatus] }}</el-tag>
+          </div>
+          <div class="detail-row"><span class="detail-label">问题描述：</span>{{ detailTicket.description }}</div>
+          <div class="detail-row" v-if="detailTicket.assignedStaffName"><span class="detail-label">处理人：</span>{{ detailTicket.assignedStaffName }}</div>
+          <div class="detail-row"><span class="detail-label">创建时间：</span>{{ detailTicket.createdAt }}</div>
+          <div class="detail-row" v-if="detailTicket.resolution"><span class="detail-label">处理结果：</span>{{ detailTicket.resolution }}</div>
+        </div>
+        <CommentSection
+          :fetch-comments="() => commentApi.getUserWorkOrderComments(detailTicket!.workOrderUuid)"
+          :add-comment="(content: string) => commentApi.addUserWorkOrderComment(detailTicket!.workOrderUuid, content)"
+        />
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -208,6 +241,12 @@ const priorityTagType: Record<string, string> = {
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.ticket-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .ticket-header {
@@ -310,5 +349,23 @@ const priorityTagType: Record<string, string> = {
   border-radius: 12px;
   padding: 32px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.detail-info {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.detail-row {
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.8;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #6b7280;
 }
 </style>

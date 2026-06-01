@@ -14,8 +14,8 @@ export function useLogin() {
     try {
       const data = await authApi.login({ username, password })
       onLoginSuccess(data)
-    } catch {
-      ElMessage.error('账号或密码错误')
+    } catch (err: any) {
+      ElMessage.error(err?.message || '账号或密码错误')
       stop()
     }
   }

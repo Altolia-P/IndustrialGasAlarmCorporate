@@ -17,4 +17,8 @@ public interface MessageRepository {
     Page<ContactMessage> findByAssignedStaffUuid(String staffUuid, int page, int size);
 
     boolean existsByPhoneInWindow(String phone, int seconds);
+
+    long countByStaffAndStatus(String staffUuid, MessageStatus status);
+
+    long countByStatus(MessageStatus status);
 }

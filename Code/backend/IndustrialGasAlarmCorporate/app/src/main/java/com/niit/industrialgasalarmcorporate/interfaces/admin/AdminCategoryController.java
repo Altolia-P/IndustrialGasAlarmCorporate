@@ -29,7 +29,7 @@ public class AdminCategoryController {
     }
 
     @PutMapping("/categories/{uuid}")
-    public Result<CategoryVO> updateCategory(@PathVariable String uuid, @RequestBody UpdateCategoryDTO dto) {
+    public Result<CategoryVO> updateCategory(@PathVariable String uuid, @Valid @RequestBody UpdateCategoryDTO dto) {
         return Result.ok("修改成功", categoryService.updateCategory(uuid, dto));
     }
 

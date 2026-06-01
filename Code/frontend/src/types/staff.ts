@@ -35,3 +35,9 @@ export interface StaffVO {
   status: StaffStatus
   createdAt: string
 }
+
+export interface UpdateStaffProfileDTO {
+  name: string
+  phone: string
+  email?: string
+}

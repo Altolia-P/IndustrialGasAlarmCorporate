@@ -7,6 +7,7 @@ import { contentApi } from '@/api/content'
 import type { ContentVO } from '@/types/content'
 import { useLoading } from '@/composables/use-loading'
 import { usePagination } from '@/composables/use-pagination'
+import { useExport } from '@/composables/use-export'
 
 const router = useRouter()
 
@@ -23,6 +24,7 @@ const statusMap: Record<string, { text: string; type: string }> = {
 const contents = ref<ContentVO[]>([])
 const { loading, start, stop } = useLoading()
 const { state: pagination, backendPage, setTotal, goToPage } = usePagination()
+const { exportToExcel } = useExport()
 
 const searchForm = ref({ title: '', type: '' })
 
@@ -81,6 +83,27 @@ async function handlePublish(uuid: string) {
   }
 }
 
+const contentExportCols = [
+  { header: '标题', key: 'title' },
+  { header: '类型', key: 'type' },
+  { header: '分类', key: 'categoryName' },
+  { header: '状态', key: 'status' },
+  { header: '发布时间', key: 'publishedAt' },
+  { header: '创建时间', key: 'createdAt' }
+]
+
+async function handleExport() {
+  const params: Record<string, unknown> = {}
+  if (searchForm.value.title) params.title = searchForm.value.title
+  if (searchForm.value.type) params.type = searchForm.value.type
+  await exportToExcel(
+    (p) => contentApi.getAdminList(p as any),
+    params,
+    contentExportCols,
+    '内容列表'
+  )
+}
+
 function handleSearch() {
   goToPage(1)
   fetchContents()
@@ -104,6 +127,7 @@ function handlePageChange(page: number) {
         <el-button type="primary" @click="handleSearch">搜索</el-button>
       </div>
       <el-button type="primary" @click="handleCreate">新增内容</el-button>
+      <el-button @click="handleExport">导出Excel</el-button>
     </div>
 
     <div v-if="loading" class="loading-state">

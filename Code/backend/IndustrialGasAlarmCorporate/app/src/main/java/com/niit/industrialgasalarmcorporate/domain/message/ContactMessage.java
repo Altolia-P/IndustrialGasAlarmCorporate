@@ -47,12 +47,18 @@ public class ContactMessage {
     }
 
     public void assign(String staffUuid, String staffName) {
+        if (this.status == MessageStatus.PROCESSED) {
+            throw new IllegalStateException("已处理的咨询不能重新分配");
+        }
         this.assignedStaffUuid = staffUuid;
         this.assignedStaffName = staffName;
         this.status = MessageStatus.IN_PROGRESS;
     }
 
     public void markProcessed(String processor, String remark) {
+        if (this.status == MessageStatus.PROCESSED) {
+            throw new IllegalStateException("咨询已处理，不能重复处理");
+        }
         this.status = MessageStatus.PROCESSED;
         this.processor = processor;
         this.remark = remark;

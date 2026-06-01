@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `.claude/`
 - `CLAUDE.md`
 
-**例外（黑名单）**：根目录下的 `Doc/` 禁止读取。
+**例外（黑名单）**：`D:\BaiduSyncdisk\Project(IndustrialGasAlarmCorporate)\Doc\` 禁止读取。
 
 ## Project Overview
 
@@ -151,12 +151,12 @@ views → utils (pure functions)
 
 ## Documentation
 
-All design docs are in `Doc/`:
+All design docs are in `Code/Doc/` (注意：根目录 `D:\BaiduSyncdisk\Project(IndustrialGasAlarmCorporate)\Doc\` 为黑名单，禁止读取):
 - `03_需求分析/` — PRD requirements docs
-- `04_系统设计/1.架构设计文档ADD/` — Architecture design docs
+- `04_系统设计/1.架构设计文档/` — Architecture design docs
 - `04_系统设计/2.类图设计文档/` — Class diagram docs
-- `04_系统设计/3.数据库设计/` — Database design docs
-- `04_系统设计/4.接口文档(API)/` — API design docs
+- `04_系统设计/3.数据库设计文档/` — Database design docs
+- `04_系统设计/4.接口设计文档/` — API design docs
 
 ## Skill routing
 

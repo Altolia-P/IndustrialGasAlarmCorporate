@@ -24,4 +24,8 @@ public interface MessageService {
     Page<MessageVO> findUserMessages(String name, int page, int size);
 
     Page<MessageVO> findStaffMessages(String staffUuid, int page, int size);
+
+    MessageVO getMyInquiryDetail(String staffUuid, String messageUuid);
+
+    void markMyInquiryProcessed(String staffUuid, String messageUuid, ProcessMessageDTO dto, String processorName);
 }

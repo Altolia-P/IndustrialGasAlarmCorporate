@@ -17,9 +17,7 @@ import com.niit.industrialgasalarmcorporate.infrastructure.repository.po.Product
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Repository
@@ -70,10 +68,7 @@ public class ProductRepositoryImpl implements ProductRepository {
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size);
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<ProductPO> result =
                 productMapper.selectPage(mpPage, wrapper);
-        List<Product> products = result.getRecords().stream()
-                .map(po -> toDomain(po, findImagesByProductUuid(po.getProductUuid()),
-                        findAttributesByProductUuid(po.getProductUuid())))
-                .collect(Collectors.toList());
+        List<Product> products = enrichProducts(result.getRecords());
         return new Page<>(products, result.getTotal(), (int) result.getSize(), (int) result.getCurrent());
     }
 
@@ -86,10 +81,7 @@ public class ProductRepositoryImpl implements ProductRepository {
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size);
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<ProductPO> result =
                 productMapper.selectPage(mpPage, wrapper);
-        List<Product> products = result.getRecords().stream()
-                .map(po -> toDomain(po, findImagesByProductUuid(po.getProductUuid()),
-                        findAttributesByProductUuid(po.getProductUuid())))
-                .collect(Collectors.toList());
+        List<Product> products = enrichProducts(result.getRecords());
         return new Page<>(products, result.getTotal(), (int) result.getSize(), (int) result.getCurrent());
     }
 
@@ -101,10 +93,7 @@ public class ProductRepositoryImpl implements ProductRepository {
                 .orderByDesc(ProductPO::getCreatedAt)
                 .last("LIMIT " + limit);
         List<ProductPO> poList = productMapper.selectList(wrapper);
-        return poList.stream()
-                .map(po -> toDomain(po, findImagesByProductUuid(po.getProductUuid()),
-                        findAttributesByProductUuid(po.getProductUuid())))
-                .collect(Collectors.toList());
+        return enrichProducts(poList);
     }
 
     @Override
@@ -124,11 +113,45 @@ public class ProductRepositoryImpl implements ProductRepository {
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size);
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<ProductPO> result =
                 productMapper.selectPage(mpPage, wrapper);
-        List<Product> products = result.getRecords().stream()
-                .map(po -> toDomain(po, findImagesByProductUuid(po.getProductUuid()),
-                        findAttributesByProductUuid(po.getProductUuid())))
-                .collect(Collectors.toList());
+        List<Product> products = enrichProducts(result.getRecords());
         return new Page<>(products, result.getTotal(), (int) result.getSize(), (int) result.getCurrent());
+    }
+
+    private List<Product> enrichProducts(List<ProductPO> records) {
+        if (records.isEmpty()) return Collections.emptyList();
+        List<String> productUuids = records.stream().map(ProductPO::getProductUuid).distinct().toList();
+        Map<String, List<ProductImage>> imagesMap = batchLoadImages(productUuids);
+        Map<String, List<ProductAttribute>> attrsMap = batchLoadAttributes(productUuids);
+        List<String> categoryUuids = records.stream().map(ProductPO::getCategoryUuid).filter(Objects::nonNull).distinct().toList();
+        Map<String, String> categoryNames = categoryUuids.isEmpty() ? Collections.emptyMap() : categoryMapper.selectBatchIds(categoryUuids).stream()
+                .collect(Collectors.toMap(c -> c.getCategoryUuid(), c -> c.getName(), (a, b) -> a));
+        return records.stream()
+                .map(po -> toDomain(po,
+                        imagesMap.getOrDefault(po.getProductUuid(), Collections.emptyList()),
+                        attrsMap.getOrDefault(po.getProductUuid(), Collections.emptyList()),
+                        categoryNames.get(po.getCategoryUuid())))
+                .collect(Collectors.toList());
+    }
+
+    private Map<String, List<ProductImage>> batchLoadImages(List<String> productUuids) {
+        LambdaQueryWrapper<ProductImagePO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(ProductImagePO::getProductUuid, productUuids)
+                .orderByAsc(ProductImagePO::getSortOrder);
+        return productImageMapper.selectList(wrapper).stream()
+                .collect(Collectors.groupingBy(
+                        ProductImagePO::getProductUuid,
+                        Collectors.mapping(this::toImageDomain, Collectors.toList())
+                ));
+    }
+
+    private Map<String, List<ProductAttribute>> batchLoadAttributes(List<String> productUuids) {
+        LambdaQueryWrapper<ProductAttributePO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(ProductAttributePO::getProductUuid, productUuids);
+        return productAttributeMapper.selectList(wrapper).stream()
+                .collect(Collectors.groupingBy(
+                        ProductAttributePO::getProductUuid,
+                        Collectors.mapping(this::toAttributeDomain, Collectors.toList())
+                ));
     }
 
     private List<ProductImage> findImagesByProductUuid(String productUuid) {
@@ -169,13 +192,10 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     private Product toDomain(ProductPO po, List<ProductImage> images, List<ProductAttribute> attributes) {
-        String categoryName = null;
-        if (po.getCategoryUuid() != null) {
-            var cat = categoryMapper.selectById(po.getCategoryUuid());
-            if (cat != null) {
-                categoryName = cat.getName();
-            }
-        }
+        return toDomain(po, images, attributes, null);
+    }
+
+    private Product toDomain(ProductPO po, List<ProductImage> images, List<ProductAttribute> attributes, String categoryName) {
         return new Product(
                 po.getProductUuid(),
                 po.getName(),

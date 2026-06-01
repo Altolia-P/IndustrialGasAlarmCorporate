@@ -8,10 +8,18 @@ import com.niit.industrialgasalarmcorporate.common.enums.ErrorCode;
 import com.niit.industrialgasalarmcorporate.common.exception.BusinessException;
 import com.niit.industrialgasalarmcorporate.domain.alert.Alert;
 import com.niit.industrialgasalarmcorporate.domain.alert.AlertRepository;
+import com.niit.industrialgasalarmcorporate.domain.auth.User;
+import com.niit.industrialgasalarmcorporate.domain.auth.UserRepository;
+import com.niit.industrialgasalarmcorporate.domain.device.Device;
+import com.niit.industrialgasalarmcorporate.domain.device.DeviceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,6 +27,8 @@ import java.util.stream.Collectors;
 public class AlertServiceImpl implements AlertService {
 
     private final AlertRepository alertRepository;
+    private final DeviceRepository deviceRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -26,12 +36,11 @@ public class AlertServiceImpl implements AlertService {
                                     String status, int page, int size) {
         Page<Alert> domainPage = alertRepository.findAllWithFilter(
                 deviceUuid, alertType, severity, status, page, size);
-        return new Page<>(
-                domainPage.getContent().stream().map(AlertAssembler::toVO).collect(Collectors.toList()),
-                domainPage.getTotalElements(),
-                domainPage.getSize(),
-                domainPage.getNumber()
-        );
+        List<AlertVO> vos = domainPage.getContent().stream()
+                .map(AlertAssembler::toVO)
+                .collect(Collectors.toList());
+        enrichBatch(vos);
+        return new Page<>(vos, domainPage.getTotalElements(), domainPage.getSize(), domainPage.getNumber());
     }
 
     @Override
@@ -39,7 +48,9 @@ public class AlertServiceImpl implements AlertService {
     public AlertVO getAlert(String alertUuid) {
         Alert alert = alertRepository.findById(alertUuid)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ALERT_NOT_FOUND));
-        return AlertAssembler.toVO(alert);
+        AlertVO vo = AlertAssembler.toVO(alert);
+        enrich(vo);
+        return vo;
     }
 
     @Override
@@ -67,5 +78,48 @@ public class AlertServiceImpl implements AlertService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ALERT_NOT_FOUND));
         alert.close();
         alertRepository.save(alert);
+    }
+
+    private void enrichBatch(List<AlertVO> vos) {
+        if (vos.isEmpty()) return;
+        Set<String> deviceUuids = vos.stream().map(AlertVO::getDeviceUuid).collect(Collectors.toSet());
+        Map<String, Device> deviceMap = deviceRepository.findByIds(deviceUuids).stream()
+                .collect(Collectors.toMap(Device::getDeviceUuid, d -> d, (a, b) -> a));
+        Set<String> customerUuids = deviceMap.values().stream()
+                .map(Device::getCustomerUuid).filter(c -> c != null && !c.isBlank()).collect(Collectors.toSet());
+        Map<String, User> userMap = customerUuids.isEmpty() ? new HashMap<>()
+                : userRepository.findByIds(customerUuids).stream()
+                .collect(Collectors.toMap(User::getUserUuid, u -> u, (a, b) -> a));
+        for (AlertVO vo : vos) {
+            Device device = deviceMap.get(vo.getDeviceUuid());
+            if (device != null) {
+                vo.setDeviceName(device.getName());
+                vo.setDeviceSerialNumber(device.getSerialNumber());
+                String customerUuid = device.getCustomerUuid();
+                if (customerUuid != null && !customerUuid.isBlank()) {
+                    vo.setCustomerUuid(customerUuid);
+                    User user = userMap.get(customerUuid);
+                    if (user != null) {
+                        vo.setCustomerName(user.getCompany());
+                        vo.setCustomerPhone(user.getPhone());
+                    }
+                }
+            }
+        }
+    }
+
+    private void enrich(AlertVO vo) {
+        deviceRepository.findById(vo.getDeviceUuid()).ifPresent(device -> {
+            vo.setDeviceName(device.getName());
+            vo.setDeviceSerialNumber(device.getSerialNumber());
+            String customerUuid = device.getCustomerUuid();
+            if (customerUuid != null && !customerUuid.isBlank()) {
+                vo.setCustomerUuid(customerUuid);
+                userRepository.findById(customerUuid).ifPresent(user -> {
+                    vo.setCustomerName(user.getCompany());
+                    vo.setCustomerPhone(user.getPhone());
+                });
+            }
+        });
     }
 }

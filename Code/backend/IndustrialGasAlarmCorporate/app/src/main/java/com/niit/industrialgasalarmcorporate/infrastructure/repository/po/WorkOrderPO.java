@@ -36,6 +36,7 @@ public class WorkOrderPO {
 
     private LocalDateTime completedAt;
 
+    @Version
     private Integer version;
 
     @TableLogic

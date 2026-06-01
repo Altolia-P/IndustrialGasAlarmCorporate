@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { WorkOrderType, WorkOrderTypeMap, WorkOrderStatus, WorkOrderStatusMap, WorkOrderPriority, WorkOrderPriorityMap } from '@/types/workorder'
 import { StaffRoleMap } from '@/types/staff'
@@ -10,6 +10,7 @@ import type { WorkOrderVO } from '@/types/workorder'
 import type { StaffVO } from '@/types/staff'
 import { useLoading } from '@/composables/use-loading'
 import { usePagination } from '@/composables/use-pagination'
+import { useExport } from '@/composables/use-export'
 
 const router = useRouter()
 
@@ -29,12 +30,19 @@ const workOrders = ref<WorkOrderVO[]>([])
 const staffList = ref<StaffVO[]>([])
 const { loading, start, stop } = useLoading()
 const { state: pagination, backendPage, setTotal, goToPage } = usePagination()
+const { exportToExcel } = useExport()
 
+const route = useRoute()
 const searchForm = ref({ title: '', type: '', status: '' })
 
-const assignDialogVisible = ref(false)
+// Inline assign state
+const assignPopoverUuid = ref('')
 const assignStaffUuid = ref('')
-const currentWorkOrderUuid = ref('')
+const staffRoleFilter = ref('')
+const filteredStaffList = computed(() => {
+  if (!staffRoleFilter.value) return staffList.value
+  return staffList.value.filter(s => s.role === staffRoleFilter.value)
+})
 
 async function fetchWorkOrders() {
   start()
@@ -67,6 +75,7 @@ async function fetchStaffList() {
 }
 
 onMounted(() => {
+  if (route.query.status) searchForm.value.status = route.query.status as string
   fetchWorkOrders()
   fetchStaffList()
 })
@@ -91,28 +100,54 @@ async function handleDelete(uuid: string) {
   }
 }
 
-function openAssign(uuid: string) {
-  currentWorkOrderUuid.value = uuid
+function openAssignPopover(uuid: string) {
+  assignPopoverUuid.value = uuid
   assignStaffUuid.value = ''
-  assignDialogVisible.value = true
+  staffRoleFilter.value = ''
 }
 
-async function handleAssign() {
-  if (!assignStaffUuid.value) {
-    ElMessage.warning('请选择负责人')
-    return
-  }
+async function handleAssignInline(uuid: string) {
+  if (!assignStaffUuid.value) return
   const staff = staffList.value.find((s) => s.staffUuid === assignStaffUuid.value)
   if (!staff) return
   try {
-    await workOrderApi.assign(currentWorkOrderUuid.value, assignStaffUuid.value, staff.name)
-    assignDialogVisible.value = false
+    await workOrderApi.assign(uuid, assignStaffUuid.value, staff.name)
+    const row = workOrders.value.find(w => w.workOrderUuid === uuid)
+    if (row) {
+      row.assignedStaffUuid = staff.staffUuid
+      row.assignedStaffName = staff.name
+      row.status = WorkOrderStatus.IN_PROGRESS
+    }
+    assignPopoverUuid.value = ''
     ElMessage.success(`已安排 ${staff.name} 处理工单`)
-    await fetchWorkOrders()
   } catch (e: unknown) {
     const err = e as { message?: string }
     ElMessage.error(err.message || '安排失败')
   }
+}
+
+const woExportCols = [
+  { header: '标题', key: 'title' },
+  { header: '类型', key: 'type' },
+  { header: '客户名称', key: 'customerName' },
+  { header: '客户电话', key: 'customerPhone' },
+  { header: '优先级', key: 'priority' },
+  { header: '状态', key: 'status' },
+  { header: '负责人', key: 'assignedStaffName' },
+  { header: '创建时间', key: 'createdAt' }
+]
+
+async function handleExport() {
+  const params: Record<string, unknown> = {}
+  if (searchForm.value.title) params.title = searchForm.value.title
+  if (searchForm.value.type) params.type = searchForm.value.type
+  if (searchForm.value.status) params.status = searchForm.value.status
+  await exportToExcel(
+    (p) => workOrderApi.getAdminList(p as Parameters<typeof workOrderApi.getAdminList>[0]),
+    params,
+    woExportCols,
+    '工单列表'
+  )
 }
 
 function handleSearch() {
@@ -143,6 +178,7 @@ function handlePageChange(page: number) {
         <el-button type="primary" @click="handleSearch">搜索</el-button>
       </div>
       <el-button type="primary" @click="handleCreate">新建工单</el-button>
+      <el-button @click="handleExport">导出Excel</el-button>
     </div>
 
     <div v-if="loading" class="loading-state">
@@ -168,11 +204,51 @@ function handlePageChange(page: number) {
             {{ WorkOrderTypeMap[row.type as WorkOrderType] }}
           </template>
         </el-table-column>
-        <el-table-column prop="customerName" label="客户" width="140" />
-        <el-table-column prop="assignedStaffName" label="负责人" width="100">
+        <el-table-column label="客户" width="140">
           <template #default="{ row }">
-            <span v-if="row.assignedStaffName">{{ row.assignedStaffName }}</span>
-            <span v-else class="unassigned">待指派</span>
+            <el-link v-if="row.customerPhone" type="primary" :underline="false" @click="router.push({ name: 'AdminCustomer360', query: { phone: row.customerPhone } })">
+              {{ row.customerName }}
+            </el-link>
+            <span v-else>{{ row.customerName }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="负责人" width="140">
+          <template #default="{ row }">
+            <template v-if="row.status === 'COMPLETED'">
+              <span>{{ row.assignedStaffName || '-' }}</span>
+            </template>
+            <template v-else>
+              <el-popover
+                :visible="assignPopoverUuid === row.workOrderUuid"
+                placement="bottom"
+                :width="280"
+                trigger="click"
+                @show="openAssignPopover(row.workOrderUuid)"
+                @hide="assignPopoverUuid = ''"
+              >
+                <template #reference>
+                  <el-link type="primary" :underline="false" @click.stop>
+                    {{ row.assignedStaffName || '待指派' }}
+                  </el-link>
+                </template>
+                <div class="inline-assign-body" @click.stop>
+                  <div class="inline-assign-row">
+                    <el-select v-model="staffRoleFilter" placeholder="职位筛选" clearable size="small" style="width:100%">
+                      <el-option v-for="(label, key) in StaffRoleMap" :key="key" :label="label" :value="key" />
+                    </el-select>
+                  </div>
+                  <div class="inline-assign-row">
+                    <el-select v-model="assignStaffUuid" placeholder="选择负责人" size="small" style="width:100%">
+                      <el-option v-for="s in filteredStaffList" :key="s.staffUuid" :label="`${s.name} — ${StaffRoleMap[s.role as keyof typeof StaffRoleMap]}`" :value="s.staffUuid" />
+                    </el-select>
+                  </div>
+                  <div class="inline-assign-actions">
+                    <el-button size="small" @click="assignPopoverUuid = ''">取消</el-button>
+                    <el-button size="small" type="primary" :disabled="!assignStaffUuid" @click="handleAssignInline(row.workOrderUuid)">确认</el-button>
+                  </div>
+                </div>
+              </el-popover>
+            </template>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
@@ -183,10 +259,9 @@ function handlePageChange(page: number) {
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="创建时间" width="160" />
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="handleEdit(row.workOrderUuid)">详情</el-button>
-            <el-button v-if="row.status === 'PENDING'" size="small" type="primary" @click="openAssign(row.workOrderUuid)">安排人员</el-button>
             <el-button size="small" type="danger" @click="handleDelete(row.workOrderUuid)">删除</el-button>
           </template>
         </el-table-column>
@@ -202,20 +277,6 @@ function handlePageChange(page: number) {
         @current-change="handlePageChange"
       />
     </div>
-
-    <el-dialog v-model="assignDialogVisible" title="安排人员" width="440px">
-      <el-form label-width="80px">
-        <el-form-item label="负责人">
-          <el-select v-model="assignStaffUuid" placeholder="请选择负责人" style="width: 100%">
-            <el-option v-for="s in staffList" :key="s.staffUuid" :label="`${s.name} - ${StaffRoleMap[s.role as keyof typeof StaffRoleMap]}`" :value="s.staffUuid" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="assignDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleAssign">确认安排</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -273,8 +334,19 @@ function handlePageChange(page: number) {
   font-size: 15px;
 }
 
-.unassigned {
-  color: #9ca3af;
-  font-size: 13px;
+.inline-assign-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inline-assign-row {
+  width: 100%;
+}
+
+.inline-assign-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 </style>

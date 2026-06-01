@@ -43,7 +43,8 @@ instance.interceptors.response.use(
     if (error.code === 'ECONNABORTED') {
       return Promise.reject({ code: 5001, message: '网络异常，请稍后重试' })
     }
-    return Promise.reject({ code: 5001, message: '网络异常，请稍后重试' })
+    const serverMsg = error.response?.data?.message
+    return Promise.reject({ code: 5001, message: serverMsg || '网络异常，请稍后重试' })
   }
 )
 

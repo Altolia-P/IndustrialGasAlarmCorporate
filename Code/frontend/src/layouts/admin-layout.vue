@@ -2,6 +2,8 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import NotificationBell from '@/components/NotificationBell.vue'
+import { alertApi } from '@/api/device'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -71,6 +73,27 @@ function handleLogout() {
         <el-menu-item index="/admin/workorders">
           <span>工单管理</span>
         </el-menu-item>
+        <el-menu-item index="/admin/devices">
+          <span>设备管理</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/alert-rules">
+          <span>报警规则</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/alerts">
+          <span>报警记录</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/notifications">
+          <span>通知记录</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/system-config">
+          <span>系统配置</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/downloads">
+          <span>下载中心</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/operation-logs">
+          <span>操作日志</span>
+        </el-menu-item>
       </el-menu>
 
       <div v-if="!sidebarCollapsed" class="sidebar-footer">
@@ -88,6 +111,9 @@ function handleLogout() {
         <div class="header-left">
           <router-link to="/" class="back-home">← 返回首页</router-link>
           <h2>{{ sidebarCollapsed ? authStore.username : ($route.meta.title || '后台管理') }}</h2>
+        </div>
+        <div class="header-right">
+          <NotificationBell :api="alertApi" view-all-route="/admin/notifications" />
         </div>
       </header>
       <main class="dashboard-main">

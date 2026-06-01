@@ -7,6 +7,7 @@ import com.niit.industrialgasalarmcorporate.application.product.dto.CreateProduc
 import com.niit.industrialgasalarmcorporate.application.product.dto.ImageDTO;
 import com.niit.industrialgasalarmcorporate.application.product.dto.UpdateProductDTO;
 import com.niit.industrialgasalarmcorporate.application.product.service.ProductService;
+import com.niit.industrialgasalarmcorporate.application.product.vo.ProductDetailVO;
 import com.niit.industrialgasalarmcorporate.application.product.vo.ProductVO;
 import com.niit.industrialgasalarmcorporate.common.base.Page;
 import com.niit.industrialgasalarmcorporate.common.base.Result;
@@ -70,6 +71,11 @@ public class AdminProductController {
             }
         }
         return Result.ok("新增成功", productService.createProduct(dto));
+    }
+
+    @GetMapping("/products/{uuid}")
+    public Result<ProductDetailVO> getProduct(@PathVariable String uuid) {
+        return Result.ok(productService.getProduct(uuid));
     }
 
     @GetMapping("/products")

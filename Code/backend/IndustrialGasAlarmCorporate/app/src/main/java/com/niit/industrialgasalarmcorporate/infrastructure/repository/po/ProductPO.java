@@ -24,6 +24,7 @@ public class ProductPO {
 
     private String categoryUuid;
 
+    @Version
     private Integer version;
 
     @TableLogic

@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { downloadFileApi } from '@/api/download-file'
+import type { DownloadFileVO } from '@/types/download-file'
 
 const router = useRouter()
 
@@ -24,14 +27,32 @@ const supportItems = [
   }
 ]
 
-const downloads = [
-  { name: 'IS-9000系列产品手册', size: '12.5 MB', type: 'PDF' },
-  { name: '气体报警控制器选型指南', size: '8.3 MB', type: 'PDF' },
-  { name: '智慧燃气平台API文档', size: '3.1 MB', type: 'PDF' },
-  { name: '产品安装与调试指南', size: '15.7 MB', type: 'PDF' },
-  { name: 'Modbus通讯协议说明', size: '2.8 MB', type: 'PDF' },
-  { name: '传感器选型对照表', size: '1.2 MB', type: 'Excel' }
-]
+const downloads = ref<DownloadFileVO[]>([])
+
+async function fetchDownloads() {
+  try {
+    const result = await downloadFileApi.getPublicList({ page: 1, size: 50 })
+    downloads.value = result.content
+  } catch {
+    downloads.value = []
+  }
+}
+
+onMounted(fetchDownloads)
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+function formatType(contentType: string): string {
+  return contentType.split('/').pop()?.toUpperCase() || contentType
+}
+
+function handleDownload(file: DownloadFileVO) {
+  window.open(downloadFileApi.getDownloadUrl(file.downloadUuid), '_blank')
+}
 
 function goContact() {
   router.push('/contact')
@@ -77,17 +98,20 @@ function goContact() {
           <h2 class="section-title">下载中心</h2>
           <p class="section-desc">产品手册、技术文档、软件工具，一键下载</p>
         </div>
-        <div class="downloads-scroll">
-          <div v-for="doc in downloads" :key="doc.name" class="download-row">
+        <div v-if="downloads.length === 0" class="downloads-empty">
+          <p>暂无下载文件</p>
+        </div>
+        <div v-else class="downloads-scroll">
+          <div v-for="file in downloads" :key="file.downloadUuid" class="download-row">
             <span class="download-icon">📄</span>
             <div class="download-info">
-              <span class="download-name">{{ doc.name }}</span>
+              <span class="download-name">{{ file.displayName }}</span>
               <div class="download-meta">
-                <span class="download-type">{{ doc.type }}</span>
-                <span class="download-size">{{ doc.size }}</span>
+                <span class="download-type">{{ formatType(file.contentType) }}</span>
+                <span class="download-size">{{ formatSize(file.fileSize) }}</span>
               </div>
             </div>
-            <el-button size="small" round>下载</el-button>
+            <el-button size="small" round @click="handleDownload(file)">下载</el-button>
           </div>
         </div>
       </div>
@@ -249,6 +273,18 @@ function goContact() {
   font-size: 16px;
   color: #6b7280;
   margin: 0;
+}
+
+.downloads-empty {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 48px 24px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 15px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
 }
 
 .downloads-scroll {

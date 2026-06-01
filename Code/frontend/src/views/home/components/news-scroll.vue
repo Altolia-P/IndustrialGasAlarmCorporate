@@ -1,11 +1,30 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { newsItems } from '@/data/home'
+import { contentApi } from '@/api/content'
+import { ContentType } from '@/types/content'
+import type { ContentVO } from '@/types/content'
 
 const router = useRouter()
+const newsList = ref<ContentVO[]>([])
+const loading = ref(false)
 
-function goNewsDetail(id: number) {
-  router.push(`/news/${id}`)
+async function fetchNews() {
+  loading.value = true
+  try {
+    const page = await contentApi.getPublicList({ type: ContentType.NEWS, size: 20 })
+    newsList.value = page.content
+  } catch {
+    newsList.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(fetchNews)
+
+function goNewsDetail(uuid: string) {
+  router.push(`/news/${uuid}`)
 }
 </script>
 
@@ -18,21 +37,29 @@ function goNewsDetail(id: number) {
         <p class="section-desc">实时更新公司动态与行业前沿信息，由管理员后台维护发布</p>
       </div>
 
-      <div class="news-scroll-wrapper">
+      <div v-if="loading" class="news-loading">
+        <p>加载中...</p>
+      </div>
+
+      <div v-else-if="newsList.length === 0" class="news-empty">
+        <p>暂无新闻</p>
+      </div>
+
+      <div v-else class="news-scroll-wrapper">
         <div class="news-scroll-track">
           <article
-            v-for="(item, index) in newsItems"
-            :key="item.id"
+            v-for="(item, index) in newsList"
+            :key="item.contentUuid"
             class="news-card"
             :style="{ animationDelay: `${index * 0.12}s` }"
-            @click="goNewsDetail(item.id)"
+            @click="goNewsDetail(item.contentUuid)"
           >
             <div class="news-card-badge">
-              <span class="badge-label">{{ item.category }}</span>
-              <span class="badge-date">{{ item.date }}</span>
+              <span class="badge-label">{{ item.categoryName }}</span>
+              <span class="badge-date">{{ item.createdAt }}</span>
             </div>
             <h3 class="news-title">{{ item.title }}</h3>
-            <p class="news-excerpt">{{ item.excerpt }}</p>
+            <p class="news-excerpt">{{ item.summary }}</p>
             <div class="news-card-footer">
               <span class="news-read-more">阅读全文 →</span>
             </div>
@@ -40,7 +67,7 @@ function goNewsDetail(id: number) {
         </div>
       </div>
 
-      <div class="news-indicator">
+      <div v-if="newsList.length > 0" class="news-indicator">
         <span class="news-indicator-text">← 左右滑动查看更多 →</span>
       </div>
     </div>
@@ -105,6 +132,14 @@ function goNewsDetail(id: number) {
   color: var(--color-text-muted);
   margin: 0;
   line-height: 1.7;
+}
+
+.news-loading,
+.news-empty {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--color-text-muted);
+  font-size: 15px;
 }
 
 .news-scroll-wrapper {

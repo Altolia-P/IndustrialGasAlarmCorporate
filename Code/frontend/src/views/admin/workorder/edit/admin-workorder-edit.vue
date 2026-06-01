@@ -6,6 +6,8 @@ import { WorkOrderType, WorkOrderTypeMap, WorkOrderStatus, WorkOrderStatusMap, W
 import { StaffRole, StaffRoleMap, StaffStatus } from '@/types/staff'
 import { workOrderApi } from '@/api/workorder'
 import { staffApi } from '@/api/staff'
+import { commentApi } from '@/api/comment'
+import CommentSection from '@/components/comment/CommentSection.vue'
 import type { StaffVO } from '@/types/staff'
 import type { WorkOrderVO } from '@/types/workorder'
 import { useLoading } from '@/composables/use-loading'
@@ -43,6 +45,11 @@ const form = reactive<WorkOrderForm>({
 })
 
 const staffList = ref<StaffVO[]>([])
+const staffRoleFilter = ref('')
+const filteredStaffList = computed(() => {
+  if (!staffRoleFilter.value) return staffList.value
+  return staffList.value.filter(s => s.role === staffRoleFilter.value)
+})
 const { loading: submitting, start: startSubmit, stop: stopSubmit } = useLoading()
 const { loading: pageLoading, start: startPage, stop: stopPage } = useLoading()
 
@@ -198,9 +205,14 @@ function handleCancel() {
           <el-input v-model="form.description" type="textarea" :rows="5" placeholder="请详细描述问题..." maxlength="500" show-word-limit :disabled="isEdit" />
         </el-form-item>
         <el-form-item label="指派人员">
-          <el-select v-if="isCreate" v-model="form.assignedStaffUuid" placeholder="请选择负责人" clearable style="width: 100%" @change="onStaffSelect">
-            <el-option v-for="s in staffList" :key="s.staffUuid" :label="`${s.name} - ${StaffRoleMap[s.role as keyof typeof StaffRoleMap]}`" :value="s.staffUuid" />
-          </el-select>
+          <div v-if="isCreate" style="display:flex; flex-direction:column; gap:8px; width:100%">
+            <el-select v-model="staffRoleFilter" placeholder="按职位筛选" clearable style="width: 100%">
+              <el-option v-for="(label, key) in StaffRoleMap" :key="key" :label="label" :value="key" />
+            </el-select>
+            <el-select v-model="form.assignedStaffUuid" placeholder="请选择负责人" clearable style="width: 100%" @change="onStaffSelect">
+              <el-option v-for="s in filteredStaffList" :key="s.staffUuid" :label="`${s.name} - ${StaffRoleMap[s.role as keyof typeof StaffRoleMap]}`" :value="s.staffUuid" />
+            </el-select>
+          </div>
           <div v-else class="readonly-field">
             {{ form.assignedStaffName || '暂未指派' }}
           </div>
@@ -222,6 +234,12 @@ function handleCancel() {
           </template>
         </el-form-item>
       </el-form>
+
+      <CommentSection
+        v-if="isEdit"
+        :fetch-comments="() => commentApi.getAdminWorkOrderComments(route.params.uuid as string)"
+        :add-comment="(content: string) => commentApi.addAdminWorkOrderComment(route.params.uuid as string, content)"
+      />
     </div>
   </div>
 </template>

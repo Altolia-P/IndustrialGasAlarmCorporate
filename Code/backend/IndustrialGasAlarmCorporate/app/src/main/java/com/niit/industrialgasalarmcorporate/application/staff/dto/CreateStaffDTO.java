@@ -16,6 +16,14 @@ public class CreateStaffDTO {
 
     private String email;
 
+    @NotBlank(message = "账号不能为空")
+    @Pattern(regexp = "^[a-zA-Z0-9_]{4,20}$", message = "账号由4-20位字母、数字或下划线组成")
+    private String username;
+
+    @NotBlank(message = "密码不能为空")
+    @Pattern(regexp = "^.{6,32}$", message = "密码长度6-32位")
+    private String password;
+
     @NotBlank(message = "角色不能为空")
     private String role;
 

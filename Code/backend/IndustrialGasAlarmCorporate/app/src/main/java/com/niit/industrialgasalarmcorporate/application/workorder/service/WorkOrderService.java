@@ -23,4 +23,8 @@ public interface WorkOrderService {
     Page<WorkOrderVO> findMyTasks(String staffUuid, String status, int page, int size);
 
     Page<WorkOrderVO> findUserWorkOrders(String customerName, int page, int size);
+
+    WorkOrderVO getMyTaskDetail(String staffUuid, String workOrderUuid);
+
+    void completeMyTask(String staffUuid, String workOrderUuid, CompleteWorkOrderDTO dto);
 }

@@ -27,8 +27,7 @@ async function changePassword() {
     await authApi.resetPassword({ username: authStore.username, newPassword: passwordForm.newPassword })
     passwordForm.newPassword = ''
     passwordForm.confirmPassword = ''
-    ElMessage.success('密码修改成功，请重新登录')
-    authStore.logout()
+    ElMessage.success('密码修改成功')
   } catch (e: unknown) {
     const err = e as { message?: string }
     ElMessage.error(err.message || '密码修改失败')

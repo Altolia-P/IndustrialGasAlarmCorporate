@@ -18,6 +18,9 @@ export const productApi = {
   getPublicDetail(uuid: string): Promise<ProductDetailVO> {
     return request.get(`/public/products/${uuid}`)
   },
+  getAdminDetail(uuid: string): Promise<ProductDetailVO> {
+    return request.get(`/admin/products/${uuid}`)
+  },
   getAdminList(params: {
     name?: string
     categoryUuid?: string

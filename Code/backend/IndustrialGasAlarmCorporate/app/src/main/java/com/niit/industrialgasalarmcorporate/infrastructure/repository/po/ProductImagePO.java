@@ -22,6 +22,7 @@ public class ProductImagePO {
 
     private Integer sortOrder;
 
+    @Version
     private Integer version;
 
     @TableLogic

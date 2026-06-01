@@ -14,6 +14,8 @@ public class StaffPO {
     @TableId
     private String staffUuid;
 
+    private String userUuid;
+
     private String name;
 
     private String phone;

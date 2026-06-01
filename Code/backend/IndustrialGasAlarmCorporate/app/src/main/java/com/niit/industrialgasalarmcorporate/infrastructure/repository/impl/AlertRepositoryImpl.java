@@ -119,6 +119,20 @@ public class AlertRepositoryImpl implements AlertRepository {
     }
 
     @Override
+    public List<Alert> findByDeviceUuids(java.util.Collection<String> deviceUuids, int limit) {
+        if (deviceUuids == null || deviceUuids.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        LambdaQueryWrapper<AlertPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(AlertPO::getDeviceUuid, deviceUuids)
+                .orderByDesc(AlertPO::getTriggeredAt)
+                .last("LIMIT " + limit);
+        return alertMapper.selectList(wrapper).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Map<LocalDate, Long> countByDay(LocalDate from, LocalDate to) {
         QueryWrapper<AlertPO> wrapper = new QueryWrapper<>();
         wrapper.select("DATE(triggered_at) as day", "COUNT(*) as cnt")
