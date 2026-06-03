@@ -1,0 +1,17 @@
+# ============================================================
+# Docker 环境专属配置 — App 模块
+# 禁用 Nacos 服务发现，使用 Docker DNS 直连
+# ============================================================
+
+spring:
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+    openfeign:
+      client:
+        config:
+          device-collector:
+            url: http://collector:8081

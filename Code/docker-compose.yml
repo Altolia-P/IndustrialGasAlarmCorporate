@@ -1,0 +1,203 @@
+# ============================================================
+# 工业气体报警企业系统 — Docker Compose 生产部署
+# 使用: docker compose up -d
+# ============================================================
+
+services:
+  # ============================================================
+  # MySQL 8.0 — 数据持久化
+  # ============================================================
+  mysql:
+    image: mysql:8.0
+    container_name: igas-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?请设置 DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: industrial_gas_alarm_corp
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - igas-net
+
+  # ============================================================
+  # Redis 7 — 缓存 + 分布式锁
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    container_name: igas-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - igas-net
+
+  # ============================================================
+  # RabbitMQ 3.13 — 消息队列
+  # ============================================================
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: igas-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - igas-net
+
+  # ============================================================
+  # App 主应用 (8080) — Spring Boot
+  # ============================================================
+  app:
+    build:
+      context: ./backend/IndustrialGasAlarmCorporate
+      dockerfile: app/Dockerfile
+    container_name: igas-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod,docker
+      DB_URL: jdbc:mysql://mysql:3306/industrial_gas_alarm_corp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_ROOT_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ""
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASS:-guest}
+      JWT_SECRET: ${JWT_SECRET:?请设置 JWT_SECRET}
+      API_TOKEN_SHARED_KEY: ${API_TOKEN_SHARED_KEY:-changeme}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      UPLOAD_PATH: /data/uploads
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/etc/igas/app-docker.yml
+    volumes:
+      - uploads_data:/data/uploads
+      - ./docker/config/app/application-docker.yml:/etc/igas/app-docker.yml:ro
+    ports:
+      - "8080:8080"
+    networks:
+      - igas-net
+
+  # ============================================================
+  # Collector 数据采集 (8081) — Spring Boot
+  # ============================================================
+  collector:
+    build:
+      context: ./backend/IndustrialGasAlarmCorporate
+      dockerfile: device-collector/Dockerfile
+    container_name: igas-collector
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod,docker
+      DB_URL: jdbc:mysql://mysql:3306/industrial_gas_alarm_collector?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_ROOT_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ""
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASS:-guest}
+      COLLECTOR_PORT: "8081"
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/etc/igas/collector-docker.yml
+    volumes:
+      - ./docker/config/collector/application-docker.yml:/etc/igas/collector-docker.yml:ro
+    ports:
+      - "8081:8081"
+    networks:
+      - igas-net
+
+  # ============================================================
+  # Simulator 设备模拟器 (8082) — Spring Boot
+  # ============================================================
+  simulator:
+    build:
+      context: ./backend/IndustrialGasAlarmCorporate
+      dockerfile: device-simulator/Dockerfile
+    container_name: igas-simulator
+    restart: unless-stopped
+    depends_on:
+      - collector
+    environment:
+      SIMULATOR_TARGET_URL: http://collector:8081/api/v1/collect/device-data
+    ports:
+      - "8082:8082"
+    networks:
+      - igas-net
+
+  # ============================================================
+  # Nginx — 前端静态文件 + 反向代理
+  # ============================================================
+  nginx:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api/v1
+    container_name: igas-nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+      - collector
+    ports:
+      - "80:80"
+    networks:
+      - igas-net
+
+# ============================================================
+# Volumes
+# ============================================================
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+# ============================================================
+# Networks
+# ============================================================
+networks:
+  igas-net:
+    driver: bridge
