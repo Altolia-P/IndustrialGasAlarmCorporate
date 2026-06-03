@@ -25,8 +25,8 @@
 
 | # | 严重度 | 问题 | 位置 | 状态 |
 |---|:------:|------|------|:----:|
-| 1 | CRITICAL | 数据库密码硬编码 `password: yueyang20041202` | `application-local.yml:3` | ✅ |
-| 2 | CRITICAL | DeepSeek API Key 暴露 `sk-809...` | `application-local.yml:19-20` | ✅ / 🔵 需轮换 Key |
+| 1 | CRITICAL | 数据库密码硬编码（已改为环境变量 `${DB_PASSWORD}`） | `application-local.yml:3` | ✅ |
+| 2 | CRITICAL | DeepSeek API Key 暴露（已改为环境变量） | `application-local.yml:19-20` | ✅ / 🔵 需轮换 Key |
 | 3 | HIGH | Nacos 默认凭据 `nacos/nacos` | `bootstrap.yml:12-13,17-18` | ✅ |
 | 4 | HIGH | JWT 密钥弱默认值 `local-dev-only-change-me` | `application-local.yml:17` | ✅ |
 | 5 | LOW | JWT 生产默认为空 — 空值时 ERROR 日志 + 随机密钥兜底 | `application.yml:62`, `JwtUtil.java:25-29` | ✅ |
