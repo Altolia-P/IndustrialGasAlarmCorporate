@@ -12,6 +12,7 @@ dist/
 # ── 环境变量（含密钥，禁止入库） ──
 **/application-local.yml
 **/application-local.*.yml
+!**/application-local.example.yml
 .env
 .env.local
 .env.*.local

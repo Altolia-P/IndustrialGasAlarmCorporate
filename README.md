@@ -59,7 +59,23 @@ mysql -u root -p < Code/backend/IndustrialGasAlarmCorporate/device-collector/src
 
 > SQL 脚本已包含 `DROP DATABASE IF EXISTS` → `CREATE DATABASE`，可重复执行。
 
-### 4. 配置环境变量
+### 4. 创建本地配置文件
+
+项目默认 profile 为 `local`，会加载 `application-local.yml`。此文件在 `.gitignore` 中，需手动从模板创建：
+
+```bash
+cd Code/backend/IndustrialGasAlarmCorporate
+
+# 复制模板为本地配置
+copy app\src\main\resources\application-local.example.yml app\src\main\resources\application-local.yml
+
+# device-collector 同理（如需启动）
+copy device-collector\src\main\resources\application-local.example.yml device-collector\src\main\resources\application-local.yml
+```
+
+然后编辑 `application-local.yml`，填入你的数据库密码、JWT 密钥等。
+
+### 5. 配置环境变量
 
 以下变量**必须配置**，否则启动失败：
 
@@ -87,7 +103,9 @@ $env:DB_PASSWORD = "root"
 $env:REDIS_PASSWORD = ""
 ```
 
-### 5. 启动后端服务
+### 6. 启动后端服务
+
+**前置条件**：Nacos 必须在 `127.0.0.1:8848` 运行（app 和 device-collector 启动时连接配置中心）。
 
 在 `Code/backend/IndustrialGasAlarmCorporate/` 目录下，依次启动 3 个服务：
 
@@ -98,16 +116,16 @@ mvnw.cmd clean install -DskipTests
 # 终端 1 — 主应用（端口 8080）
 mvnw.cmd -pl app spring-boot:run
 
-# 终端 2 — 设备采集（端口 8081）  
+# 终端 2 — 设备采集（端口 8081，需 Nacos + RabbitMQ）  
 mvnw.cmd -pl device-collector spring-boot:run
 
-# 终端 3 — 设备模拟器（端口 8082，可选）
+# 终端 3 — 设备模拟器（端口 8082，可选，需 RabbitMQ）
 mvnw.cmd -pl device-simulator spring-boot:run
 ```
 
 > 如未安装 RabbitMQ，仅启动 app 即可。device-collector 和 device-simulator 会因 RabbitMQ 连接失败而报错，不影响主应用。
 
-### 6. 启动前端
+### 7. 启动前端
 
 ```bash
 cd Code/frontend
