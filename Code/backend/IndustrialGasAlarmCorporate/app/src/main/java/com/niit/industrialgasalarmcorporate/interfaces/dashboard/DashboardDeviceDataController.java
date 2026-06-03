@@ -121,7 +121,7 @@ public class DashboardDeviceDataController {
                         deviceNameMap.getOrDefault(a.getDeviceUuid(), "—"),
                         a.getSeverity().name(),
                         a.getAlertType().name(),
-                        a.getConcentration().toPlainString(),
+                        a.getConcentration() != null ? a.getConcentration().toPlainString() : "—",
                         a.getMessage(),
                         DTF.format(a.getTriggeredAt())))
                 .collect(Collectors.toList());
