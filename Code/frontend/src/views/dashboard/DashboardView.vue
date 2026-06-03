@@ -83,8 +83,8 @@ async function loadInitialData() {
 
       // Default select the first online device (simulator preferred)
       if (!selectedDeviceUuid.value && devicesData.length > 0) {
-        const sim = devicesData.find(d => d.name.toLowerCase().includes('sim'))
-        selectedDeviceUuid.value = sim ? sim.deviceUuid : devicesData[0].deviceUuid
+        const def = devicesData.find(d => d.deviceUuid === 'demo-sim-001')
+        selectedDeviceUuid.value = def ? def.deviceUuid : devicesData[0].deviceUuid
       }
 
       // Fetch latest data for selected device for initial chart

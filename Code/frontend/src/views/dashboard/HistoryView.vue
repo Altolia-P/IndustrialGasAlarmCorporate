@@ -60,8 +60,8 @@ onMounted(async () => {
 
 watch(filteredDevices, (list) => {
   if (!selectedDevice.value || !list.find(d => d.deviceUuid === selectedDevice.value)) {
-    const sim = list.find(d => d.name.toLowerCase().includes('sim'))
-    selectedDevice.value = sim ? sim.deviceUuid : (list.length > 0 ? list[0].deviceUuid : '')
+    const def = list.find(d => d.deviceUuid === 'demo-sim-001')
+    selectedDevice.value = def ? def.deviceUuid : (list.length > 0 ? list[0].deviceUuid : '')
   }
 })
 
