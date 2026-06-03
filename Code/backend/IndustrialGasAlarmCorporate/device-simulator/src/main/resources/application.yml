@@ -3,7 +3,7 @@ server:
 
 simulator:
   enabled: true
-  interval-ms: 5000
+  interval-ms: 600000
   target-url: http://localhost:8081/api/v1/collect/device-data
   devices:
     - device-uuid: "demo-sim-001"
