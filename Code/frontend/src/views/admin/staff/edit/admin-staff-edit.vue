@@ -58,7 +58,7 @@ function validate(): string | null {
   if (form.email && !RE_EMAIL.test(form.email)) return '请输入正确的电子邮箱'
   if (!isEdit.value) {
     if (!form.username || !form.username.trim()) return '请输入登录账号'
-    if (!/^[a-zA-Z0-9_]{4,20}$/.test(form.username)) return '账号由4-20位字母、数字或下划线组成'
+    if (!/^[一-龥a-zA-Z0-9_]{2,20}$/.test(form.username)) return '账号由2-20位中文、字母、数字或下划线组成'
     if (!form.password || !form.password.trim()) return '请输入登录密码'
     if (form.password.length < 6) return '密码长度至少6位'
   }
@@ -138,7 +138,7 @@ onMounted(async () => {
         </el-form-item>
         <template v-if="!isEdit">
           <el-form-item label="登录账号" required>
-            <el-input v-model="form.username" placeholder="4-20位字母、数字或下划线" maxlength="20" />
+            <el-input v-model="form.username" placeholder="2-20位，支持中文/字母/数字/下划线" maxlength="20" />
           </el-form-item>
           <el-form-item label="登录密码" required>
             <el-input v-model="form.password" type="password" placeholder="至少6位" maxlength="32" show-password />
