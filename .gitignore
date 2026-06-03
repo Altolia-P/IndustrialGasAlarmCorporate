@@ -25,8 +25,8 @@ CLAUDE.md
 # ── gstack 浏览器工具产物 ──
 **/.gstack/
 
-# ── 设计文档 ──
-Doc/
+# ── 根级设计文档（黑名单） ──
+/Doc/
 
 # ── 个人工作日志 ──
 work-log.md
@@ -43,6 +43,8 @@ project_rules*.md
 **/依赖库.md
 **/CHANGELOG.md
 **/Skill(*).md
+**/接口规则Skill.md
+**/demo-image-prompts.md
 
 # ── 临时笔记 ──
 **/启动指南.md
