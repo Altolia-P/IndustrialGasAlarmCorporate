@@ -29,9 +29,26 @@ public class DataInitializer implements CommandLineRunner {
                         created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                     """);
+            ensureIndexes();
             log.info("device-collector 数据库初始化完成");
         } catch (Exception e) {
             log.warn("device-collector 数据库初始化失败（DB 不可用）: {}", e.getMessage());
+        }
+    }
+
+    private void ensureIndexes() {
+        String[] indexes = {
+                "CREATE INDEX idx_device_uuid ON t_device_data_point (device_uuid)",
+                "CREATE INDEX idx_recorded_at ON t_device_data_point (recorded_at)",
+                "CREATE INDEX idx_device_recorded ON t_device_data_point (device_uuid, recorded_at)"
+        };
+        for (String sql : indexes) {
+            try {
+                jdbcTemplate.execute(sql);
+                log.info("索引已创建: {}", sql);
+            } catch (Exception e) {
+                log.debug("索引已存在或创建失败，跳过: {}", e.getMessage());
+            }
         }
     }
 }
