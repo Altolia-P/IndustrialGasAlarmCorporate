@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -41,6 +43,19 @@ public class DeviceDataPointRepositoryImpl implements DeviceDataPointRepository 
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
         LambdaQueryWrapper<DeviceDataPointPO> wrapper = new LambdaQueryWrapper<>();
         wrapper.ge(DeviceDataPointPO::getCreatedAt, startOfDay)
+                .orderByDesc(DeviceDataPointPO::getCreatedAt);
+        return deviceDataPointMapper.selectList(wrapper).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<DeviceDataPoint> findTodayByDeviceUuids(Collection<String> deviceUuids) {
+        if (deviceUuids == null || deviceUuids.isEmpty()) return Collections.emptyList();
+        LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LambdaQueryWrapper<DeviceDataPointPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(DeviceDataPointPO::getDeviceUuid, deviceUuids)
+                .ge(DeviceDataPointPO::getCreatedAt, startOfDay)
                 .orderByDesc(DeviceDataPointPO::getCreatedAt);
         return deviceDataPointMapper.selectList(wrapper).stream()
                 .map(this::toDomain)

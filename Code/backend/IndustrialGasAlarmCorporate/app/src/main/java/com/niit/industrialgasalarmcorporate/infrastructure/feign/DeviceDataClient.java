@@ -27,4 +27,7 @@ public interface DeviceDataClient {
 
     @GetMapping("/device-data/stats")
     DeviceStatsFeignVO getStats();
+
+    @GetMapping("/device-data/stats/scoped")
+    DeviceStatsFeignVO getStatsByDevices(@RequestParam List<String> deviceUuids);
 }

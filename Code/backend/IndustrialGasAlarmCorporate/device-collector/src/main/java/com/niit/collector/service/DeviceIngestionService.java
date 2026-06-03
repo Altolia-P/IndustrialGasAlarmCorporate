@@ -15,4 +15,6 @@ public interface DeviceIngestionService {
     DeviceDataPointVO getLatest(String deviceUuid);
 
     DeviceStatsVO getStats();
+
+    DeviceStatsVO getStatsByDevices(List<String> deviceUuids);
 }

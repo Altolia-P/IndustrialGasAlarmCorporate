@@ -93,10 +93,19 @@ public class DashboardDeviceDataController {
         long todayDataPoints = 0;
         String avgConcentration = "—";
         try {
-            var stats = deviceDataClient.getStats();
-            if (stats != null) {
-                todayDataPoints = stats.getTodayDataPoints();
-                avgConcentration = stats.getAvgConcentration() != null ? stats.getAvgConcentration() : "—";
+            if (isAdmin()) {
+                var stats = deviceDataClient.getStats();
+                if (stats != null) {
+                    todayDataPoints = stats.getTodayDataPoints();
+                    avgConcentration = stats.getAvgConcentration() != null ? stats.getAvgConcentration() : "—";
+                }
+            } else if (!devices.isEmpty()) {
+                var stats = deviceDataClient.getStatsByDevices(
+                        devices.stream().map(Device::getDeviceUuid).collect(Collectors.toList()));
+                if (stats != null) {
+                    todayDataPoints = stats.getTodayDataPoints();
+                    avgConcentration = stats.getAvgConcentration() != null ? stats.getAvgConcentration() : "—";
+                }
             }
         } catch (Exception e) {
             log.debug("获取统计数据失败: {}", e.getMessage());

@@ -96,11 +96,23 @@ public class DeviceIngestionServiceImpl implements DeviceIngestionService {
     @Override
     @Transactional(readOnly = true)
     public DeviceStatsVO getStats() {
-        List<DeviceDataPoint> today = deviceDataPointRepository.findToday();
-        long count = today.size();
+        return buildStats(deviceDataPointRepository.findToday());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DeviceStatsVO getStatsByDevices(List<String> deviceUuids) {
+        if (deviceUuids == null || deviceUuids.isEmpty()) {
+            return new DeviceStatsVO(0, "—");
+        }
+        return buildStats(deviceDataPointRepository.findTodayByDeviceUuids(deviceUuids));
+    }
+
+    private DeviceStatsVO buildStats(List<DeviceDataPoint> points) {
+        long count = points.size();
         String avg = "—";
         if (count > 0) {
-            double sum = today.stream()
+            double sum = points.stream()
                     .mapToDouble(dp -> dp.getConcentration() != null ? dp.getConcentration().doubleValue() : 0)
                     .sum();
             avg = String.format("%.2f", sum / count);

@@ -42,4 +42,9 @@ public class DeviceDataController {
     public com.niit.collector.vo.DeviceStatsVO getStats() {
         return deviceIngestionService.getStats();
     }
+
+    @GetMapping("/device-data/stats/scoped")
+    public com.niit.collector.vo.DeviceStatsVO getStatsByDevices(@RequestParam List<String> deviceUuids) {
+        return deviceIngestionService.getStatsByDevices(deviceUuids);
+    }
 }
