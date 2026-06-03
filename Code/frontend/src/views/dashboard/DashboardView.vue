@@ -159,6 +159,7 @@ watch(devices, (list) => {
 
     <div class="dashboard-body">
       <StatCards
+        v-if="authStore.isAdmin"
         :online-count="onlineCount"
         :total-count="totalCount"
         :alert-count="alertCount"

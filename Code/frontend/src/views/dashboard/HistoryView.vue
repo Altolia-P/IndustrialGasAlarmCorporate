@@ -173,7 +173,7 @@ function formatLocalTime(date: Date): string {
     </div>
 
     <div class="history-controls">
-      <div class="control-group">
+      <div v-if="authStore.isAdmin" class="control-group">
         <label>客户筛选</label>
         <select v-model="customerFilter" class="device-select">
           <option v-for="opt in customerOptions" :key="opt.value" :value="opt.value">
