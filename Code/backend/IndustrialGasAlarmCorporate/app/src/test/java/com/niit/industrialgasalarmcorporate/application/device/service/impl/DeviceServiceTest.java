@@ -6,10 +6,12 @@ import com.niit.industrialgasalarmcorporate.application.device.vo.DeviceVO;
 import com.niit.industrialgasalarmcorporate.common.base.Page;
 import com.niit.industrialgasalarmcorporate.common.enums.ErrorCode;
 import com.niit.industrialgasalarmcorporate.common.exception.BusinessException;
+import com.niit.industrialgasalarmcorporate.domain.auth.UserRepository;
 import com.niit.industrialgasalarmcorporate.domain.device.Device;
 import com.niit.industrialgasalarmcorporate.domain.device.DeviceRepository;
 import com.niit.industrialgasalarmcorporate.domain.device.DeviceStatus;
 import com.niit.industrialgasalarmcorporate.domain.device.GasType;
+import com.niit.industrialgasalarmcorporate.infrastructure.redis.DashboardCacheRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -37,6 +39,12 @@ class DeviceServiceTest {
     @Mock
     private DeviceRepository deviceRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private DashboardCacheRepository dashboardCacheRepository;
+
     @InjectMocks
     private DeviceServiceImpl deviceService;
 
@@ -45,7 +53,7 @@ class DeviceServiceTest {
 
     @BeforeEach
     void setUp() {
-        device = new Device(DEVICE_UUID, "SN-001", "测试设备", "GT-M4", "cust-001",
+        device = new Device(DEVICE_UUID, "SN-001", "test-api-token", "测试设备", "GT-M4", "cust-001",
                 "A区", null, GasType.CH4, new BigDecimal("0"), new BigDecimal("5.0"),
                 new BigDecimal("1.0"), DeviceStatus.NORMAL,
                 LocalDateTime.now(), LocalDateTime.now());
@@ -172,7 +180,7 @@ class DeviceServiceTest {
         @Test
         @DisplayName("标记为正常")
         void shouldMarkNormal() {
-            Device abnormal = new Device(DEVICE_UUID, "SN-001", "测试设备", "GT-M4", "cust-001",
+            Device abnormal = new Device(DEVICE_UUID, "SN-001", "test-api-token", "测试设备", "GT-M4", "cust-001",
                     "A区", null, GasType.CH4, new BigDecimal("0"), new BigDecimal("5.0"),
                     new BigDecimal("1.0"), DeviceStatus.ABNORMAL,
                     LocalDateTime.now(), LocalDateTime.now());
@@ -212,7 +220,7 @@ class DeviceServiceTest {
         @Test
         @DisplayName("结束维护")
         void shouldEndMaintenance() {
-            Device maintenance = new Device(DEVICE_UUID, "SN-001", "测试设备", "GT-M4", "cust-001",
+            Device maintenance = new Device(DEVICE_UUID, "SN-001", "test-api-token", "测试设备", "GT-M4", "cust-001",
                     "A区", null, GasType.CH4, new BigDecimal("0"), new BigDecimal("5.0"),
                     new BigDecimal("1.0"), DeviceStatus.MAINTENANCE,
                     LocalDateTime.now(), LocalDateTime.now());

@@ -16,7 +16,7 @@ public class SpringEventBus implements EventBus {
 
     @Override
     public void publish(DomainEvent event) {
-        log.info("发布领域事件: {} id={}", event.getClass().getSimpleName(), event.getEventId());
+        log.debug("发布领域事件: {} id={}", event.getClass().getSimpleName(), event.getEventId());
         publisher.publishEvent(event);
     }
 }

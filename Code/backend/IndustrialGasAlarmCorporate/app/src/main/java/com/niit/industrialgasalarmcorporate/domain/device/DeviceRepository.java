@@ -23,6 +23,8 @@ public interface DeviceRepository {
 
     List<Device> findByCustomerUuid(String customerUuid);
 
+    List<Device> findAll();
+
     List<Device> findAllOnline();
 
     long countByStatus(DeviceStatus status);

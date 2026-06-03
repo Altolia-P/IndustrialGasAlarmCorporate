@@ -45,7 +45,7 @@ mvn clean package -DskipTests
 
 ## Frontend Commands
 
-（前端项目尚未初始化，预计位于 `Code/frontend/`）
+（前端项目已完成开发，位于 `Code/frontend/`）
 
 ```bash
 # Install dependencies

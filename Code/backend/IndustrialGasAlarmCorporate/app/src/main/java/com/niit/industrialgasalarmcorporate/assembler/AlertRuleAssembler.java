@@ -3,6 +3,8 @@ package com.niit.industrialgasalarmcorporate.assembler;
 import com.niit.industrialgasalarmcorporate.application.alert.dto.CreateAlertRuleDTO;
 import com.niit.industrialgasalarmcorporate.application.alert.dto.UpdateAlertRuleDTO;
 import com.niit.industrialgasalarmcorporate.application.alert.vo.AlertRuleVO;
+import com.niit.industrialgasalarmcorporate.common.enums.ErrorCode;
+import com.niit.industrialgasalarmcorporate.common.exception.BusinessException;
 import com.niit.industrialgasalarmcorporate.domain.alert.AlertRule;
 import com.niit.industrialgasalarmcorporate.domain.alert.AlertRuleType;
 import com.niit.industrialgasalarmcorporate.domain.alert.AlertSeverity;
@@ -16,15 +18,27 @@ public final class AlertRuleAssembler {
     private AlertRuleAssembler() {}
 
     public static AlertRule toEntity(CreateAlertRuleDTO dto) {
+        AlertRuleType ruleType;
+        try {
+            ruleType = AlertRuleType.valueOf(dto.getRuleType());
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "无效的规则类型: " + dto.getRuleType());
+        }
+        AlertSeverity severity;
+        try {
+            severity = AlertSeverity.valueOf(dto.getSeverity());
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "无效的严重级别: " + dto.getSeverity());
+        }
         return new AlertRule(
                 dto.getName(),
                 dto.getDeviceUuid(),
-                AlertRuleType.valueOf(dto.getRuleType()),
+                ruleType,
                 dto.getGasType(),
                 dto.getThreshold(),
                 dto.getDurationSeconds(),
-                AlertSeverity.valueOf(dto.getSeverity()),
-                dto.isAutoCreateWorkOrder()
+                severity,
+                dto.getAutoCreateWorkOrder() != null ? dto.getAutoCreateWorkOrder() : false
         );
     }
 
@@ -36,7 +50,7 @@ public final class AlertRuleAssembler {
                 dto.getThreshold(),
                 dto.getDurationSeconds(),
                 dto.getSeverity() != null ? AlertSeverity.valueOf(dto.getSeverity()) : null,
-                dto.isAutoCreateWorkOrder()
+                dto.getAutoCreateWorkOrder()
         );
     }
 

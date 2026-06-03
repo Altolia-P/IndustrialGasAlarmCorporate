@@ -1,26 +1,25 @@
 package com.niit.industrialgasalarmcorporate.application.alert.service.impl;
 
 import com.niit.industrialgasalarmcorporate.application.alert.service.AlertEngineService;
-import com.niit.industrialgasalarmcorporate.application.workorder.dto.CreateWorkOrderDTO;
-import com.niit.industrialgasalarmcorporate.application.workorder.service.WorkOrderService;
-import com.niit.industrialgasalarmcorporate.domain.alert.Alert;
-import com.niit.industrialgasalarmcorporate.domain.alert.AlertRepository;
 import com.niit.industrialgasalarmcorporate.domain.alert.AlertRule;
 import com.niit.industrialgasalarmcorporate.domain.alert.AlertRuleRepository;
+import com.niit.industrialgasalarmcorporate.domain.alert.AlertRuleType;
 import com.niit.industrialgasalarmcorporate.domain.alert.AlertSeverity;
 import com.niit.industrialgasalarmcorporate.domain.device.Device;
-import com.niit.industrialgasalarmcorporate.domain.device.DeviceDataPoint;
 import com.niit.industrialgasalarmcorporate.domain.device.DeviceRepository;
-import com.niit.industrialgasalarmcorporate.domain.event.AlertCreatedEvent;
-import com.niit.industrialgasalarmcorporate.domain.event.EventBus;
+import com.niit.industrialgasalarmcorporate.infrastructure.config.RabbitMQConfig;
+import com.niit.industrialgasalarmcorporate.infrastructure.mq.AlertMessage;
 import com.niit.industrialgasalarmcorporate.infrastructure.redis.AlertSuppressRepository;
 import com.niit.industrialgasalarmcorporate.infrastructure.redis.DeviceDataWindowRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
 @Slf4j
@@ -30,106 +29,94 @@ public class AlertEngineServiceImpl implements AlertEngineService {
 
     private final DeviceRepository deviceRepository;
     private final AlertRuleRepository alertRuleRepository;
-    private final AlertRepository alertRepository;
     private final DeviceDataWindowRepository deviceDataWindowRepository;
     private final AlertSuppressRepository alertSuppressRepository;
-    private final EventBus eventBus;
-    private final WorkOrderService workOrderService;
+    private final RabbitTemplate rabbitTemplate;
 
     private static final Duration SUPPRESS_COOLDOWN = Duration.ofMinutes(5);
 
     @Override
     @Transactional
-    public void evaluate(DeviceDataPoint dataPoint) {
-        Device device = deviceRepository.findById(dataPoint.getDeviceUuid()).orElse(null);
+    public void evaluate(String deviceUuid, BigDecimal concentration, LocalDateTime timestamp) {
+        Device device = deviceRepository.findById(deviceUuid).orElse(null);
         if (device == null) {
             return;
         }
 
+        if (device.getGasType() == null) {
+            log.warn("设备 {} 的气体类型为空，跳过告警评估", deviceUuid);
+            return;
+        }
         String gasType = device.getGasType().name();
-        long nowSeconds = dataPoint.getTimestamp().toEpochSecond(ZoneOffset.UTC);
+        long nowSeconds = timestamp.toEpochSecond(ZoneOffset.UTC);
 
-        var rules = alertRuleRepository.findByDeviceUuid(dataPoint.getDeviceUuid());
-        rules.addAll(alertRuleRepository.findAllGlobal());
+        var rules = alertRuleRepository.findByDeviceUuid(deviceUuid);
+        if (rules == null) {
+            rules = new java.util.ArrayList<>();
+        }
+        var globalRules = alertRuleRepository.findAllGlobal();
+        if (globalRules != null) {
+            rules.addAll(globalRules);
+        }
 
         for (AlertRule rule : rules) {
-            if (!rule.matches(dataPoint.getDeviceUuid(), gasType)) {
+            if (!rule.matches(deviceUuid, gasType)) {
                 continue;
             }
 
-            if (rule.getRuleType() == com.niit.industrialgasalarmcorporate.domain.alert.AlertRuleType.THRESHOLD) {
-                evaluateThreshold(dataPoint, device, rule, nowSeconds);
+            if (rule.getRuleType() == AlertRuleType.THRESHOLD) {
+                evaluateThreshold(deviceUuid, concentration, timestamp, device, rule, nowSeconds);
             }
         }
     }
 
-    private void evaluateThreshold(DeviceDataPoint dataPoint, Device device,
-                                   AlertRule rule, long nowSeconds) {
-        if (dataPoint.getConcentration() == null || rule.getThreshold() == null) {
+    private void evaluateThreshold(String deviceUuid, BigDecimal concentration, LocalDateTime timestamp,
+                                   Device device, AlertRule rule, long nowSeconds) {
+        if (concentration == null || rule.getThreshold() == null) {
             return;
         }
 
-        boolean exceeded = rule.evaluate(dataPoint.getConcentration());
+        boolean exceeded = rule.evaluate(concentration);
 
         if (exceeded) {
-            deviceDataWindowRepository.addDataPoint(
-                    dataPoint.getDeviceUuid(),
-                    dataPoint.getConcentration().doubleValue(),
-                    nowSeconds);
             long windowStart = nowSeconds - rule.getDurationSeconds();
-            deviceDataWindowRepository.removeExpired(dataPoint.getDeviceUuid(), windowStart);
+            String ruleUuid = rule.getRuleUuid();
+
+            if (!alertSuppressRepository.trySuppress(deviceUuid, ruleUuid, SUPPRESS_COOLDOWN)) {
+                return;
+            }
+
+            deviceDataWindowRepository.removeExpired(deviceUuid, ruleUuid, windowStart);
+            deviceDataWindowRepository.addDataPoint(
+                    deviceUuid,
+                    ruleUuid,
+                    concentration.doubleValue(),
+                    nowSeconds);
             long exceedCount = deviceDataWindowRepository.countExceededInWindow(
-                    dataPoint.getDeviceUuid(), windowStart);
+                    deviceUuid, ruleUuid, windowStart);
 
             if (exceedCount >= 1) {
-                if (!alertSuppressRepository.trySuppress(
-                        dataPoint.getDeviceUuid(), rule.getRuleUuid(), SUPPRESS_COOLDOWN)) {
-                    return;
-                }
+                AlertMessage message = new AlertMessage();
+                message.setDeviceUuid(deviceUuid);
+                message.setRuleUuid(rule.getRuleUuid());
+                message.setAlertType(AlertRuleType.THRESHOLD.name());
+                message.setSeverity(rule.getSeverity().name());
+                message.setConcentration(concentration);
+                message.setThreshold(rule.getThreshold());
+                message.setMessage(String.format("设备 %s (%s) 气体浓度 %.4f 超过阈值 %.4f",
+                        device.getName(), device.getGasType().name(),
+                        concentration, rule.getThreshold()));
+                message.setAutoCreateWorkOrder(rule.isAutoCreateWorkOrder());
+                message.setDeviceName(device.getName());
 
-                Alert alert = new Alert(
-                        dataPoint.getDeviceUuid(),
-                        rule.getRuleUuid(),
-                        com.niit.industrialgasalarmcorporate.domain.alert.AlertRuleType.THRESHOLD,
-                        rule.getSeverity(),
-                        dataPoint.getConcentration(),
-                        rule.getThreshold(),
-                        String.format("设备 %s (%s) 气体浓度 %.4f 超过阈值 %.4f",
-                                device.getName(), device.getGasType().name(),
-                                dataPoint.getConcentration(), rule.getThreshold())
-                );
+                rabbitTemplate.convertAndSend(
+                        RabbitMQConfig.ALERT_EXCHANGE,
+                        RabbitMQConfig.ALERT_ROUTING_KEY,
+                        message);
 
-                alertRepository.save(alert);
-
-                if (rule.isAutoCreateWorkOrder()) {
-                    try {
-                        CreateWorkOrderDTO workOrderDTO = new CreateWorkOrderDTO();
-                        workOrderDTO.setTitle(String.format("报警工单: %s - %s",
-                                device.getName(), rule.getSeverity().name()));
-                        workOrderDTO.setType("TECH_SUPPORT");
-                        workOrderDTO.setDescription(alert.getMessage());
-                        workOrderDTO.setPriority(rule.getSeverity() == AlertSeverity.CRITICAL
-                                ? "HIGH" : rule.getSeverity() == AlertSeverity.WARNING ? "MEDIUM" : "LOW");
-                        workOrderDTO.setCustomerName(device.getName());
-                        String workOrderUuid = workOrderService.createWorkOrder(workOrderDTO)
-                                .getWorkOrderUuid();
-                        alert.setWorkOrderUuid(workOrderUuid);
-                        alertRepository.save(alert);
-                        log.info("工单自动创建: alertUuid={}, workOrderUuid={}",
-                                alert.getAlertUuid(), workOrderUuid);
-                    } catch (Exception e) {
-                        log.warn("自动创建工单失败: alertUuid={}, error={}",
-                                alert.getAlertUuid(), e.getMessage());
-                    }
-                }
-
-                eventBus.publish(new AlertCreatedEvent(
-                        alert.getAlertUuid(), alert.getDeviceUuid(),
-                        alert.getAlertType().name(), alert.getSeverity().name(),
-                        alert.getMessage()));
-                log.info("Alert triggered: device={}, rule={}, concentration={}, threshold={}",
-                        dataPoint.getDeviceUuid(), rule.getName(),
-                        dataPoint.getConcentration(), rule.getThreshold());
+                log.info("告警消息已发送到 RabbitMQ: device={}, rule={}, concentration={}, threshold={}",
+                        deviceUuid, rule.getName(),
+                        concentration, rule.getThreshold());
             }
         }
     }

@@ -10,6 +10,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import com.niit.industrialgasalarmcorporate.infrastructure.aop.LogOperation;
+
 @RestController
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor
@@ -32,16 +34,19 @@ public class AdminStaffController {
         return Result.ok(staffService.getStaff(uuid));
     }
 
+    @LogOperation(operation = "CREATE", targetType = "STAFF")
     @PostMapping("/staff")
     public Result<StaffVO> createStaff(@Valid @RequestBody CreateStaffDTO dto) {
         return Result.ok("创建成功", staffService.createStaff(dto));
     }
 
+    @LogOperation(operation = "UPDATE", targetType = "STAFF")
     @PutMapping("/staff/{uuid}")
     public Result<StaffVO> updateStaff(@PathVariable String uuid, @Valid @RequestBody UpdateStaffDTO dto) {
         return Result.ok("更新成功", staffService.updateStaff(uuid, dto));
     }
 
+    @LogOperation(operation = "DELETE", targetType = "STAFF")
     @DeleteMapping("/staff/{uuid}")
     public Result<Void> deleteStaff(@PathVariable String uuid) {
         staffService.deleteStaff(uuid);

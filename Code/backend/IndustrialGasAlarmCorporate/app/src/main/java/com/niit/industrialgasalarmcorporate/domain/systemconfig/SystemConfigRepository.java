@@ -10,4 +10,6 @@ public interface SystemConfigRepository {
     List<SystemConfig> findAll();
 
     void save(SystemConfig config);
+
+    void deleteByKey(String configKey);
 }

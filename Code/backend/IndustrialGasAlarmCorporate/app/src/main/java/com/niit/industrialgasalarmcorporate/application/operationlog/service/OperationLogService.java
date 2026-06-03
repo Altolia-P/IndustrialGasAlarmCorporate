@@ -7,7 +7,7 @@ public interface OperationLogService {
 
     void record(String operatorUuid, String operatorName, String operation,
                 String targetType, String targetId, String targetName,
-                String detail, String ip);
+                String detail, String businessPurpose, String ip);
 
     OperationLogVO getById(String logId);
 

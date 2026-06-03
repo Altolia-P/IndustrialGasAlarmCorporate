@@ -26,6 +26,7 @@ public class Alert {
     private String workOrderUuid;
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Integer version;
 
     public Alert(String deviceUuid, String ruleUuid, AlertRuleType alertType, AlertSeverity severity,
                  BigDecimal concentration, BigDecimal threshold, String message) {
@@ -48,7 +49,7 @@ public class Alert {
                  String message, AlertStatus status, LocalDateTime triggeredAt,
                  LocalDateTime confirmedAt, String confirmedBy, LocalDateTime resolvedAt,
                  String resolvedBy, String workOrderUuid, LocalDateTime createdAt,
-                 LocalDateTime updatedAt) {
+                 LocalDateTime updatedAt, Integer version) {
         this.alertUuid = alertUuid;
         this.deviceUuid = deviceUuid;
         this.ruleUuid = ruleUuid;
@@ -66,6 +67,7 @@ public class Alert {
         this.workOrderUuid = workOrderUuid;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.version = version;
     }
 
     public void confirm(String confirmedBy) {
@@ -87,15 +89,12 @@ public class Alert {
     }
 
     public void close() {
-        if (this.status == AlertStatus.RESOLVED) {
+        if (this.status == AlertStatus.RESOLVED || this.status == AlertStatus.CONFIRMED
+                || this.status == AlertStatus.PENDING) {
             this.status = AlertStatus.CLOSED;
             return;
         }
-        if (this.status == AlertStatus.PENDING) {
-            this.status = AlertStatus.CLOSED;
-            return;
-        }
-        throw new BusinessException(ErrorCode.VALIDATION_ERROR, "仅待处理或已解决状态的报警可关闭");
+        throw new BusinessException(ErrorCode.VALIDATION_ERROR, "仅待处理、已确认或已解决状态的报警可关闭");
     }
 
     public String getAlertUuid() { return alertUuid; }
@@ -115,6 +114,7 @@ public class Alert {
     public String getWorkOrderUuid() { return workOrderUuid; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Integer getVersion() { return version; }
 
     public void setWorkOrderUuid(String workOrderUuid) { this.workOrderUuid = workOrderUuid; }
 }

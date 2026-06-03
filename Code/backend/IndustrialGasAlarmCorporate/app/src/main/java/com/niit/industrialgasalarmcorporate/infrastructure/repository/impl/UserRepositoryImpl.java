@@ -57,6 +57,11 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    public void delete(String userUuid) {
+        userMapper.deleteById(userUuid);
+    }
+
+    @Override
     public void save(User user) {
         UserPO po = toPO(user);
         UserPO existing = userMapper.selectById(user.getUserUuid());

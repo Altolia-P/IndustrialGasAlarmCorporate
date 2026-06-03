@@ -3,58 +3,70 @@ package com.niit.industrialgasalarmcorporate.application.device.service.impl;
 import com.niit.industrialgasalarmcorporate.application.device.dto.DeviceDataPointDTO;
 import com.niit.industrialgasalarmcorporate.application.device.service.DeviceIngestionService;
 import com.niit.industrialgasalarmcorporate.application.device.vo.DeviceDataPointVO;
-import com.niit.industrialgasalarmcorporate.assembler.DeviceDataPointAssembler;
-import com.niit.industrialgasalarmcorporate.application.alert.service.AlertEngineService;
-import com.niit.industrialgasalarmcorporate.common.enums.ErrorCode;
-import com.niit.industrialgasalarmcorporate.common.exception.BusinessException;
-import com.niit.industrialgasalarmcorporate.domain.device.DeviceDataPoint;
-import com.niit.industrialgasalarmcorporate.domain.device.DeviceDataPointRepository;
-import com.niit.industrialgasalarmcorporate.domain.device.DeviceRepository;
+import com.niit.industrialgasalarmcorporate.infrastructure.feign.DeviceDataClient;
+import com.niit.industrialgasalarmcorporate.infrastructure.feign.dto.DeviceDataPointFeignVO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DeviceIngestionServiceImpl implements DeviceIngestionService {
 
-    private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-    private final DeviceRepository deviceRepository;
-    private final DeviceDataPointRepository deviceDataPointRepository;
-    private final AlertEngineService alertEngineService;
+    private final DeviceDataClient deviceDataClient;
 
     @Override
-    @Transactional
     public void ingest(DeviceDataPointDTO dto) {
-        if (deviceRepository.findById(dto.getDeviceUuid()).isEmpty()) {
-            throw new BusinessException(ErrorCode.DEVICE_NOT_FOUND);
-        }
-        DeviceDataPoint dataPoint = DeviceDataPointAssembler.toEntity(dto);
-        deviceDataPointRepository.save(dataPoint);
-        alertEngineService.evaluate(dataPoint);
+        deviceDataClient.ingestData(toFeignVO(dto));
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<DeviceDataPointVO> getDataPoints(String deviceUuid, String from, String to) {
-        LocalDateTime fromTime = from != null ? LocalDateTime.parse(from, DTF) : null;
-        LocalDateTime toTime = to != null ? LocalDateTime.parse(to, DTF) : null;
-        return deviceDataPointRepository.findByDeviceUuid(deviceUuid, fromTime, toTime).stream()
-                .map(DeviceDataPointAssembler::toVO)
+        List<DeviceDataPointFeignVO> feignVOs = deviceDataClient.getDataPoints(deviceUuid, from, to);
+        if (feignVOs == null) {
+            return Collections.emptyList();
+        }
+        return feignVOs.stream()
+                .map(this::toVO)
                 .collect(Collectors.toList());
     }
 
     @Override
-    @Transactional(readOnly = true)
     public DeviceDataPointVO getLatest(String deviceUuid) {
-        return deviceDataPointRepository.findLatest(deviceUuid)
-                .map(DeviceDataPointAssembler::toVO)
-                .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
+        DeviceDataPointFeignVO feignVO = deviceDataClient.getLatest(deviceUuid);
+        if (feignVO == null) {
+            return null;
+        }
+        return toVO(feignVO);
+    }
+
+    private DeviceDataPointFeignVO toFeignVO(DeviceDataPointDTO dto) {
+        DeviceDataPointFeignVO vo = new DeviceDataPointFeignVO();
+        vo.setDeviceUuid(dto.getDeviceUuid());
+        vo.setTimestamp(dto.getTimestamp() != null ? dto.getTimestamp().toString() : null);
+        vo.setConcentration(dto.getConcentration() != null ? dto.getConcentration().toPlainString() : null);
+        vo.setBattery(dto.getBattery() != null ? dto.getBattery().toPlainString() : null);
+        vo.setTemperature(dto.getTemperature() != null ? dto.getTemperature().toPlainString() : null);
+        vo.setHumidity(dto.getHumidity() != null ? dto.getHumidity().toPlainString() : null);
+        vo.setSignalStrength(dto.getSignalStrength());
+        return vo;
+    }
+
+    private DeviceDataPointVO toVO(DeviceDataPointFeignVO feignVO) {
+        DeviceDataPointVO vo = new DeviceDataPointVO();
+        vo.setDeviceUuid(feignVO.getDeviceUuid());
+        vo.setTimestamp(feignVO.getTimestamp());
+        vo.setConcentration(feignVO.getConcentration());
+        vo.setBattery(feignVO.getBattery());
+        vo.setTemperature(feignVO.getTemperature());
+        vo.setHumidity(feignVO.getHumidity());
+        vo.setSignalStrength(feignVO.getSignalStrength());
+        vo.setCreatedAt(feignVO.getCreatedAt());
+        return vo;
     }
 }

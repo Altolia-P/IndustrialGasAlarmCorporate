@@ -12,6 +12,7 @@ public class Device {
 
     private final String deviceUuid;
     private final String serialNumber;
+    private final String apiToken;
     private String name;
     private String model;
     private String customerUuid;
@@ -30,8 +31,9 @@ public class Device {
                   BigDecimal rangeMax, BigDecimal alertThreshold) {
         this.deviceUuid = UUID.randomUUID().toString();
         this.serialNumber = serialNumber;
-        this.model = model;
+        this.apiToken = UUID.randomUUID().toString().replace("-", "");
         this.name = name;
+        this.model = model;
         this.customerUuid = customerUuid;
         this.installLocation = installLocation;
         this.installDate = LocalDate.now();
@@ -44,13 +46,14 @@ public class Device {
         this.updatedAt = this.createdAt;
     }
 
-    public Device(String deviceUuid, String serialNumber, String name, String model,
+    public Device(String deviceUuid, String serialNumber, String apiToken, String name, String model,
                   String customerUuid, String installLocation, LocalDate installDate,
                   GasType gasType, BigDecimal rangeMin, BigDecimal rangeMax,
                   BigDecimal alertThreshold, DeviceStatus status,
                   LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.deviceUuid = deviceUuid;
         this.serialNumber = serialNumber;
+        this.apiToken = apiToken;
         this.name = name;
         this.model = model;
         this.customerUuid = customerUuid;
@@ -85,6 +88,9 @@ public class Device {
     public void markOffline() {
         if (this.status == DeviceStatus.MAINTENANCE) {
             return;
+        }
+        if (this.status != DeviceStatus.NORMAL && this.status != DeviceStatus.ABNORMAL) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "仅正常或异常状态的设备可标记为离线");
         }
         this.status = DeviceStatus.OFFLINE;
     }
@@ -141,6 +147,7 @@ public class Device {
 
     public String getDeviceUuid() { return deviceUuid; }
     public String getSerialNumber() { return serialNumber; }
+    public String getApiToken() { return apiToken; }
     public String getName() { return name; }
     public String getModel() { return model; }
     public String getCustomerUuid() { return customerUuid; }

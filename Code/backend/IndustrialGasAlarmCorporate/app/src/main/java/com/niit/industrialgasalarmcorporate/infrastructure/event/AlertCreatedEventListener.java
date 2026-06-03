@@ -4,8 +4,9 @@ import com.niit.industrialgasalarmcorporate.application.notification.service.Not
 import com.niit.industrialgasalarmcorporate.domain.event.AlertCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
 @RequiredArgsConstructor
@@ -14,7 +15,7 @@ public class AlertCreatedEventListener {
 
     private final NotificationService notificationService;
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(AlertCreatedEvent event) {
         log.info("收到报警创建事件: alertUuid={}, deviceUuid={}, severity={}",
                 event.getAlertUuid(), event.getDeviceUuid(), event.getSeverity());

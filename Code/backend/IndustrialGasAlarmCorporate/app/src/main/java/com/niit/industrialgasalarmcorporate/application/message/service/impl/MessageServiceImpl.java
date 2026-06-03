@@ -18,6 +18,7 @@ import com.niit.industrialgasalarmcorporate.domain.staff.StaffRepository;
 import com.niit.industrialgasalarmcorporate.domain.staff.StaffStatus;
 import com.niit.industrialgasalarmcorporate.domain.workorder.WorkOrderRepository;
 import com.niit.industrialgasalarmcorporate.domain.workorder.WorkOrderStatus;
+import com.niit.industrialgasalarmcorporate.infrastructure.redis.DashboardCacheRepository;
 import com.niit.industrialgasalarmcorporate.infrastructure.redis.MessageRateLimitRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,7 @@ public class MessageServiceImpl implements MessageService {
     private final MessageRateLimitRepository rateLimitRepository;
     private final StaffRepository staffRepository;
     private final WorkOrderRepository workOrderRepository;
+    private final DashboardCacheRepository dashboardCacheRepository;
 
     @Override
     @Transactional
@@ -47,7 +49,8 @@ public class MessageServiceImpl implements MessageService {
         }
         ContactMessage message = MessageAssembler.toEntity(dto, ip);
         messageRepository.save(message);
-        log.info("留言提交成功: messageUuid={}, phone={}, ip={}", message.getMessageUuid(), dto.getPhone(), ip);
+        log.info("留言提交成功: messageUuid={}, phone={}, ip={}", message.getMessageUuid(), com.niit.industrialgasalarmcorporate.common.utils.MaskUtil.phone(dto.getPhone()), ip);
+        evictDashboardCache();
         return message.getMessageUuid();
     }
 
@@ -65,6 +68,7 @@ public class MessageServiceImpl implements MessageService {
         messageRepository.save(message);
         staff.changeStatus(StaffStatus.WORKING);
         staffRepository.save(staff);
+        evictDashboardCache();
     }
 
     @Override
@@ -75,6 +79,7 @@ public class MessageServiceImpl implements MessageService {
         String staffUuid = message.getAssignedStaffUuid();
         message.markProcessed(processor, dto.getRemark());
         messageRepository.save(message);
+        evictDashboardCache();
 
         if (staffUuid != null) {
             long remainingMsg = messageRepository.countByStaffAndStatus(staffUuid, MessageStatus.IN_PROGRESS);
@@ -97,6 +102,7 @@ public class MessageServiceImpl implements MessageService {
             message.markProcessed(processor, dto.getRemark() != null ? dto.getRemark() : "批量处理");
             messageRepository.save(message);
         }
+        evictDashboardCache();
     }
 
     @Override
@@ -104,7 +110,7 @@ public class MessageServiceImpl implements MessageService {
     public MessageVO getMessage(String messageUuid) {
         ContactMessage message = messageRepository.findById(messageUuid)
                 .orElseThrow(() -> new MessageNotFoundException(messageUuid));
-        return MessageAssembler.toVO(message);
+        return MessageAssembler.toVO(message, false);
     }
 
     @Override
@@ -118,7 +124,7 @@ public class MessageServiceImpl implements MessageService {
             domainPage = messageRepository.findAll(page, size, msgStatus);
         }
         return new Page<>(
-                domainPage.getContent().stream().map(MessageAssembler::toVO).collect(Collectors.toList()),
+                domainPage.getContent().stream().map(m -> MessageAssembler.toVO(m, false)).collect(Collectors.toList()),
                 domainPage.getTotalElements(),
                 domainPage.getSize(),
                 domainPage.getNumber()
@@ -130,7 +136,7 @@ public class MessageServiceImpl implements MessageService {
     public Page<MessageVO> findUserMessages(String name, int page, int size) {
         Page<ContactMessage> domainPage = messageRepository.findAllWithFilter(name, null, null, page, size);
         return new Page<>(
-                domainPage.getContent().stream().map(MessageAssembler::toVO).collect(Collectors.toList()),
+                domainPage.getContent().stream().map(m -> MessageAssembler.toVO(m, true)).collect(Collectors.toList()),
                 domainPage.getTotalElements(),
                 domainPage.getSize(),
                 domainPage.getNumber()
@@ -145,7 +151,7 @@ public class MessageServiceImpl implements MessageService {
         if (!staffUuid.equals(message.getAssignedStaffUuid())) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "该咨询未分配给您");
         }
-        return MessageAssembler.toVO(message);
+        return MessageAssembler.toVO(message, false);
     }
 
     @Override
@@ -159,6 +165,7 @@ public class MessageServiceImpl implements MessageService {
         }
         message.markProcessed(processorName, dto.getRemark());
         messageRepository.save(message);
+        evictDashboardCache();
 
         long remainingMsg = messageRepository.countByStaffAndStatus(staffUuid, MessageStatus.IN_PROGRESS);
         long remainingWo = workOrderRepository.countByStaffAndStatus(staffUuid, WorkOrderStatus.IN_PROGRESS);
@@ -175,10 +182,18 @@ public class MessageServiceImpl implements MessageService {
     public Page<MessageVO> findStaffMessages(String staffUuid, int page, int size) {
         Page<ContactMessage> domainPage = messageRepository.findByAssignedStaffUuid(staffUuid, page, size);
         return new Page<>(
-                domainPage.getContent().stream().map(MessageAssembler::toVO).collect(Collectors.toList()),
+                domainPage.getContent().stream().map(m -> MessageAssembler.toVO(m, false)).collect(Collectors.toList()),
                 domainPage.getTotalElements(),
                 domainPage.getSize(),
                 domainPage.getNumber()
         );
+    }
+
+    private void evictDashboardCache() {
+        try {
+            dashboardCacheRepository.evict("dashboard:stats");
+        } catch (Exception e) {
+            log.debug("Dashboard缓存失效失败: {}", e.getMessage());
+        }
     }
 }

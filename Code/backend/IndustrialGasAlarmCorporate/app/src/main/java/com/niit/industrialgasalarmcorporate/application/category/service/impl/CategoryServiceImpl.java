@@ -11,6 +11,8 @@ import com.niit.industrialgasalarmcorporate.common.exception.CategoryNotFoundExc
 import com.niit.industrialgasalarmcorporate.domain.category.Category;
 import com.niit.industrialgasalarmcorporate.domain.category.CategoryRepository;
 import com.niit.industrialgasalarmcorporate.domain.category.CategoryType;
+import com.niit.industrialgasalarmcorporate.domain.content.ContentRepository;
+import com.niit.industrialgasalarmcorporate.domain.product.ProductRepository;
 import com.niit.industrialgasalarmcorporate.infrastructure.redis.CategoryCacheRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +28,8 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CategoryCacheRepository cacheRepository;
+    private final ProductRepository productRepository;
+    private final ContentRepository contentRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -45,8 +49,12 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryVO createCategory(CreateCategoryDTO dto) {
         CategoryType categoryType = CategoryType.valueOf(dto.getType());
-        validateParent(dto.getParentUuid());
-        Category category = new Category(dto.getName(), categoryType, dto.getParentUuid(), dto.getSortOrder());
+        String parentUuid = dto.getParentUuid();
+        if (parentUuid != null && parentUuid.isBlank()) {
+            parentUuid = null;
+        }
+        validateParent(parentUuid);
+        Category category = new Category(dto.getName(), categoryType, parentUuid, dto.getSortOrder());
         categoryRepository.save(category);
         evictCache(dto.getType());
         log.info("分类已创建: name={}, type={}, uuid={}", category.getName(), category.getType(), category.getCategoryUuid());
@@ -60,9 +68,12 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(CategoryNotFoundException::new);
         String name = dto.getName() != null ? dto.getName() : category.getName();
         CategoryType type = dto.getType() != null ? CategoryType.valueOf(dto.getType()) : category.getType();
-        String parentUuid = dto.getParentUuid() != null ? dto.getParentUuid() : category.getParentUuid();
-        if (dto.getParentUuid() != null && !dto.getParentUuid().equals(category.getParentUuid())) {
-            validateParent(parentUuid);
+        String parentUuid = category.getParentUuid();
+        if (dto.getParentUuid() != null) {
+            parentUuid = dto.getParentUuid().isBlank() ? null : dto.getParentUuid();
+            if (!java.util.Objects.equals(parentUuid, category.getParentUuid())) {
+                validateParent(parentUuid);
+            }
         }
         int sortOrder = dto.getSortOrder() != null ? dto.getSortOrder() : category.getSortOrder();
         category = new Category(categoryUuid, name, type, parentUuid, sortOrder);
@@ -77,6 +88,21 @@ public class CategoryServiceImpl implements CategoryService {
     public void deleteCategory(String categoryUuid) {
         Category category = categoryRepository.findById(categoryUuid)
                 .orElseThrow(CategoryNotFoundException::new);
+        List<Category> children = categoryRepository.findByParentUuid(categoryUuid);
+        if (!children.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR,
+                    "该分类下存在 " + children.size() + " 个子分类，无法删除");
+        }
+        long productCount = productRepository.countByCategoryUuid(categoryUuid);
+        if (productCount > 0) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR,
+                    "该分类下存在 " + productCount + " 个产品，无法删除");
+        }
+        long contentCount = contentRepository.countByCategoryUuid(categoryUuid);
+        if (contentCount > 0) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR,
+                    "该分类下存在 " + contentCount + " 个内容，无法删除");
+        }
         categoryRepository.delete(categoryUuid);
         evictCache(category.getType().name());
         log.info("分类已删除: uuid={}, name={}", categoryUuid, category.getName());

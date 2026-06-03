@@ -26,7 +26,14 @@ public class OperationLogAspect {
 
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            String operatorUuid = auth != null ? (String) auth.getPrincipal() : "anonymous";
+            String operatorUuid;
+            if (auth != null && auth.getPrincipal() instanceof String s) {
+                operatorUuid = s;
+            } else if (auth != null) {
+                operatorUuid = auth.getName();
+            } else {
+                operatorUuid = "anonymous";
+            }
             String username = (String) request.getAttribute("username");
             if (username == null) {
                 username = operatorUuid;
@@ -35,9 +42,9 @@ public class OperationLogAspect {
 
             operationLogService.record(
                     operatorUuid, username, logAnno.operation(), logAnno.targetType(),
-                    extractTargetId(joinPoint), null, null, ip);
+                    extractTargetId(joinPoint), null, null, logAnno.businessPurpose(), ip);
         } catch (Exception e) {
-            log.warn("操作日志记录失败: {}", e.getMessage());
+            log.warn("操作日志记录失败", e);
         }
 
         return result;

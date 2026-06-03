@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import DOMPurify from 'dompurify'
 import { contentApi } from '@/api/content'
 import { ContentType } from '@/types/content'
 import type { ContentDetailVO, ContentVO } from '@/types/content'
@@ -16,7 +17,8 @@ const loadingRelated = ref(false)
 async function fetchDetail() {
   loading.value = true
   try {
-    news.value = await contentApi.getPublicDetail(route.params.uuid as string)
+    const data = await contentApi.getPublicDetail(route.params.uuid as string)
+    news.value = { ...data, body: DOMPurify.sanitize(data.body) }
   } catch {
     news.value = null
   } finally {

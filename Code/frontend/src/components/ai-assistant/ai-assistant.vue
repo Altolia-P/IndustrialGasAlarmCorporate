@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useChat } from '@/composables/use-chat'
@@ -9,12 +9,16 @@ import AiChatDialog from './ai-chat-dialog.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const { inputText, sendMessage, clearChat, toggleChat, store } = useChat()
+const { inputText, sendMessage, clearChat, toggleChat, dispose, store } = useChat()
 
 onMounted(() => {
   if (!authStore.tokenVerified) {
     authStore.verifyToken()
   }
+})
+
+onUnmounted(() => {
+  dispose()
 })
 
 function handleFloatBallClick() {

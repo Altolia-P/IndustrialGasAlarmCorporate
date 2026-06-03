@@ -9,4 +9,6 @@ public @interface LogOperation {
     String operation();
 
     String targetType();
+
+    String businessPurpose() default "";
 }

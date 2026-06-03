@@ -16,6 +16,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import com.niit.industrialgasalarmcorporate.infrastructure.aop.LogOperation;
+
 import java.util.List;
 
 @RestController
@@ -36,6 +38,7 @@ public class AdminMessageController {
         return Result.ok(messageService.findMessages(name, phone, status, page, size));
     }
 
+    @LogOperation(operation = "ASSIGN", targetType = "MESSAGE")
     @PutMapping("/messages/{uuid}/assign")
     public Result<Void> assignMessage(@PathVariable String uuid,
                                       @Valid @RequestBody AssignMessageDTO dto) {
@@ -43,6 +46,7 @@ public class AdminMessageController {
         return Result.ok("指派成功", null);
     }
 
+    @LogOperation(operation = "PROCESS", targetType = "MESSAGE")
     @PutMapping("/messages/{uuid}/process")
     public Result<Void> processMessage(@PathVariable String uuid,
                                         @Valid @RequestBody ProcessMessageDTO dto,
@@ -51,6 +55,7 @@ public class AdminMessageController {
         return Result.ok("处理成功", null);
     }
 
+    @LogOperation(operation = "PROCESS", targetType = "MESSAGE")
     @PutMapping("/messages/process/batch")
     public Result<Void> batchProcess(@Valid @RequestBody BatchProcessDTO dto,
                                       @RequestAttribute String username) {

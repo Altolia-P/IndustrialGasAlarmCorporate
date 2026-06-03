@@ -102,6 +102,15 @@ public class DeviceRepositoryImpl implements DeviceRepository {
     }
 
     @Override
+    public List<Device> findAll() {
+        LambdaQueryWrapper<DevicePO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(DevicePO::getCreatedAt);
+        return deviceMapper.selectList(wrapper).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public List<Device> findAllOnline() {
         LambdaQueryWrapper<DevicePO> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(DevicePO::getStatus, DeviceStatus.NORMAL.name(), DeviceStatus.ABNORMAL.name())
@@ -122,6 +131,7 @@ public class DeviceRepositoryImpl implements DeviceRepository {
         return new Device(
                 po.getDeviceUuid(),
                 po.getSerialNumber(),
+                po.getApiToken(),
                 po.getName(),
                 po.getModel(),
                 po.getCustomerUuid(),
@@ -141,6 +151,7 @@ public class DeviceRepositoryImpl implements DeviceRepository {
         DevicePO po = new DevicePO();
         po.setDeviceUuid(device.getDeviceUuid());
         po.setSerialNumber(device.getSerialNumber());
+        po.setApiToken(device.getApiToken());
         po.setName(device.getName());
         po.setModel(device.getModel());
         po.setCustomerUuid(device.getCustomerUuid());

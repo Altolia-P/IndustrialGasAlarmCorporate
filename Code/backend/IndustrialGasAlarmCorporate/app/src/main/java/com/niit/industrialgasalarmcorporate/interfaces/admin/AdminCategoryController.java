@@ -9,6 +9,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import com.niit.industrialgasalarmcorporate.infrastructure.aop.LogOperation;
+
 import java.util.List;
 
 @RestController
@@ -18,6 +20,7 @@ public class AdminCategoryController {
 
     private final CategoryService categoryService;
 
+    @LogOperation(operation = "CREATE", targetType = "CATEGORY")
     @PostMapping("/categories")
     public Result<CategoryVO> createCategory(@Valid @RequestBody CreateCategoryDTO dto) {
         return Result.ok("新增成功", categoryService.createCategory(dto));
@@ -28,11 +31,13 @@ public class AdminCategoryController {
         return Result.ok(categoryService.getCategoriesByType(type));
     }
 
+    @LogOperation(operation = "UPDATE", targetType = "CATEGORY")
     @PutMapping("/categories/{uuid}")
     public Result<CategoryVO> updateCategory(@PathVariable String uuid, @Valid @RequestBody UpdateCategoryDTO dto) {
         return Result.ok("修改成功", categoryService.updateCategory(uuid, dto));
     }
 
+    @LogOperation(operation = "DELETE", targetType = "CATEGORY")
     @DeleteMapping("/categories/{uuid}")
     public Result<Void> deleteCategory(@PathVariable String uuid) {
         categoryService.deleteCategory(uuid);

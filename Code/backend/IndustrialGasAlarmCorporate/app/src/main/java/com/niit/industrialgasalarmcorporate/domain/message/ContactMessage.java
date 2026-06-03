@@ -17,6 +17,7 @@ public class ContactMessage {
     private String assignedStaffName;
     private final LocalDateTime submittedAt;
     private LocalDateTime processedAt;
+    private Integer version;
 
     public ContactMessage(String name, String phone, String content, String ip) {
         this.messageUuid = UUID.randomUUID().toString();
@@ -31,7 +32,8 @@ public class ContactMessage {
     public ContactMessage(String messageUuid, String name, String phone, String content,
                           String ip, MessageStatus status, String processor, String remark,
                           String assignedStaffUuid, String assignedStaffName,
-                          LocalDateTime submittedAt, LocalDateTime processedAt) {
+                          LocalDateTime submittedAt, LocalDateTime processedAt,
+                          Integer version) {
         this.messageUuid = messageUuid;
         this.name = name;
         this.phone = phone;
@@ -44,6 +46,7 @@ public class ContactMessage {
         this.assignedStaffName = assignedStaffName;
         this.submittedAt = submittedAt;
         this.processedAt = processedAt;
+        this.version = version;
     }
 
     public void assign(String staffUuid, String staffName) {
@@ -111,5 +114,9 @@ public class ContactMessage {
 
     public LocalDateTime getProcessedAt() {
         return processedAt;
+    }
+
+    public Integer getVersion() {
+        return version;
     }
 }

@@ -28,6 +28,7 @@ export interface ContentVO {
   categoryName: string
   status: ContentStatus
   createdAt: string
+  updatedAt?: string
 }
 
 export interface ContentDetailVO {

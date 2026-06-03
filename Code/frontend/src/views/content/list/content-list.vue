@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { solutions, type SolutionData } from '@/data/solutions'
 import { contentApi } from '@/api/content'
 import { ContentType, ContentStatus } from '@/types/content'
 import type { ContentVO } from '@/types/content'
@@ -9,16 +8,16 @@ import { useLoading } from '@/composables/use-loading'
 
 const router = useRouter()
 
-const contentSolutions = ref<ContentVO[]>([])
+const solutions = ref<ContentVO[]>([])
 const { loading, start, stop } = useLoading()
 
 async function fetchSolutions() {
   start()
   try {
     const page = await contentApi.getPublicList({ type: ContentType.SOLUTION, size: 100 })
-    contentSolutions.value = page.content.filter((c) => c.status === ContentStatus.PUBLISHED)
+    solutions.value = page.content.filter((c) => c.status === ContentStatus.PUBLISHED)
   } catch {
-    contentSolutions.value = []
+    solutions.value = []
   } finally {
     stop()
   }
@@ -28,37 +27,8 @@ onMounted(() => {
   fetchSolutions()
 })
 
-const activeId = ref(solutions.length > 0 ? solutions[0].id : '')
-
-const allSolutions = computed<SolutionData[]>(() => {
-  const published = contentSolutions.value
-    .map((c) => ({
-      id: c.contentUuid,
-      name: c.title,
-      icon: '🔧',
-      description: c.summary,
-      detail: {
-        title: c.title,
-        description: c.summary,
-        features: [] as string[],
-        stats: { projects: '-', clients: '-' }
-      }
-    } satisfies SolutionData))
-  const existingIds = new Set(solutions.map((s) => s.id))
-  const newOnes = published.filter((s) => !existingIds.has(s.id))
-  return [...solutions, ...newOnes]
-})
-
-const currentSolution = computed(() => {
-  return allSolutions.value.find((s) => s.id === activeId.value) || allSolutions.value[0]
-})
-
-function switchTab(id: string) {
-  activeId.value = id
-}
-
-function goDetail(id: string) {
-  router.push(`/solutions/${id}`)
+function goDetail(uuid: string) {
+  router.push(`/solutions/${uuid}`)
 }
 
 function goContact() {
@@ -75,70 +45,43 @@ function goContact() {
       </div>
     </section>
 
-    <section class="solutions-detail">
+    <section class="solutions-grid-section">
       <div class="container">
-        <div class="solutions-layout">
-          <div class="solution-tabs">
-            <button
-              v-for="sol in allSolutions"
-              :key="sol.id"
-              :class="['solution-tab-btn', { active: activeId === sol.id }]"
-              @click="switchTab(sol.id)"
-            >
-              <span class="tab-icon-circle">{{ sol.icon }}</span>
-              <span class="tab-label">{{ sol.name }}</span>
-            </button>
-          </div>
-          <div class="solution-content">
-            <h2 class="solution-title">{{ currentSolution.detail.title }}</h2>
-            <p class="solution-desc">{{ currentSolution.detail.description }}</p>
-
-            <div class="feature-grid">
-              <div v-for="(f, i) in currentSolution.detail.features" :key="i" class="feature-item">
-                <span class="feature-check">✓</span>
-                <span>{{ f }}</span>
-              </div>
-            </div>
-
-            <div class="solution-footer">
-              <div class="solution-stat">
-                <span class="stat-big">{{ currentSolution.detail.stats.projects }}</span>
-                <span class="stat-small">成功项目</span>
-              </div>
-              <div class="solution-stat">
-                <span class="stat-big">{{ currentSolution.detail.stats.clients }}</span>
-                <span class="stat-small">服务客户</span>
-              </div>
-              <div class="solution-actions">
-                <el-button type="primary" size="large" round @click="goDetail(currentSolution.id)">
-                  了解详情
-                </el-button>
-                <el-button size="large" round class="btn-outline-blue" @click="goContact">
-                  在线咨询
-                </el-button>
-              </div>
-            </div>
-          </div>
+        <div v-if="loading" class="loading-state">
+          <p>加载中...</p>
         </div>
-      </div>
-    </section>
 
-    <section class="all-solutions">
-      <div class="container">
-        <div class="section-header">
-          <h2 class="section-title">全部行业方案</h2>
-          <p class="section-desc">每种方案都经过行业验证，可灵活适配不同规模的项目需求</p>
+        <div v-else-if="solutions.length === 0" class="empty-state">
+          <p>暂无解决方案</p>
         </div>
-        <div class="solutions-grid">
-          <div v-for="sol in allSolutions" :key="sol.id" class="solution-card" @click="goDetail(sol.id)">
-            <div class="card-icon">{{ sol.icon }}</div>
-            <h3 class="card-name">{{ sol.name }}</h3>
-            <p class="card-desc">{{ sol.description }}</p>
-            <div class="card-stats">
-              <span><strong>{{ sol.detail.stats.projects }}</strong> 项目</span>
-              <span><strong>{{ sol.detail.stats.clients }}</strong> 客户</span>
+
+        <div v-else class="solutions-grid">
+          <div
+            v-for="sol in solutions"
+            :key="sol.contentUuid"
+            class="solution-card"
+            @click="goDetail(sol.contentUuid)"
+          >
+            <div class="card-image">
+              <img
+                v-if="sol.coverImage"
+                :src="sol.coverImage"
+                :alt="sol.title"
+                class="card-cover"
+              />
+              <div v-else class="card-placeholder">
+                <span class="placeholder-icon">🔧</span>
+              </div>
+              <span class="card-category">{{ sol.categoryName }}</span>
             </div>
-            <span class="card-link">查看方案 →</span>
+            <div class="card-body">
+              <h3 class="card-title">{{ sol.title }}</h3>
+              <p class="card-desc">{{ sol.summary }}</p>
+              <div class="card-footer">
+                <span class="card-date">{{ sol.createdAt }}</span>
+                <span class="card-link">了解详情 →</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -181,257 +124,117 @@ function goContact() {
   color: #6b7280;
 }
 
-.solutions-detail {
+.solutions-grid-section {
   padding: 0 0 80px;
 }
 
-.solutions-layout {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 40px;
-  align-items: start;
-  background: #f9fafb;
-  border-radius: 20px;
-  padding: 40px;
-}
-
-.solution-tabs {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.solution-tab-btn {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 20px;
-  border: none;
-  border-radius: 12px;
-  background: #ffffff;
-  cursor: pointer;
-  font-size: 15px;
-  color: #4b5563;
-  transition: all 0.3s;
-  width: 100%;
-  text-align: left;
-}
-
-.solution-tab-btn:hover {
-  background: #e5e7eb;
-}
-
-.solution-tab-btn.active {
-  background: #3b82f6;
-  color: #ffffff;
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
-}
-
-.tab-icon-circle {
-  width: 40px;
-  height: 40px;
+.loading-state,
+.empty-state {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  background: #f3f4f6;
-  font-size: 20px;
-  flex-shrink: 0;
-}
-
-.solution-tab-btn.active .tab-icon-circle {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.tab-label {
-  font-weight: 600;
-}
-
-.solution-content {
-  padding: 8px 0;
-}
-
-.solution-title {
-  font-size: 26px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 16px;
-}
-
-.solution-desc {
-  font-size: 16px;
-  color: #6b7280;
-  line-height: 1.8;
-  margin: 0 0 28px;
-}
-
-.feature-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 32px;
-}
-
-.feature-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 15px;
-  color: #374151;
-}
-
-.feature-check {
-  width: 22px;
-  height: 22px;
-  background: #3b82f6;
-  color: #ffffff;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.solution-footer {
-  display: flex;
-  align-items: center;
-  gap: 40px;
-  padding-top: 24px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.solution-stat {
-  display: flex;
-  flex-direction: column;
-}
-
-.stat-big {
-  font-size: 28px;
-  font-weight: 700;
-  color: #3b82f6;
-}
-
-.stat-small {
-  font-size: 13px;
+  padding: 80px 24px;
   color: #9ca3af;
-  margin-top: 2px;
-}
-
-.solution-actions {
-  display: flex;
-  gap: 12px;
-  margin-left: auto;
-}
-
-.btn-outline-blue {
-  border-color: #3b82f6;
-  color: #3b82f6;
-}
-
-.all-solutions {
-  padding: 80px 0;
-}
-
-.section-header {
-  text-align: center;
-  margin-bottom: 48px;
-}
-
-.section-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 12px;
-}
-
-.section-desc {
-  font-size: 18px;
-  color: #6b7280;
-  margin: 0;
+  font-size: 15px;
 }
 
 .solutions-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
 }
 
 .solution-card {
-  background: #f9fafb;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
   border-radius: 16px;
-  padding: 32px;
+  overflow: hidden;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .solution-card:hover {
-  background: #3b82f6;
   transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+  border-color: #3b82f6;
 }
 
-.card-icon {
-  font-size: 36px;
-  margin-bottom: 16px;
+.card-image {
+  position: relative;
+  height: 180px;
+  background: #f3f4f6;
+  overflow: hidden;
 }
 
-.card-name {
-  font-size: 20px;
+.card-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+}
+
+.placeholder-icon {
+  font-size: 48px;
+}
+
+.card-category {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #3b82f6;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 4px 12px;
+  border-radius: 50px;
+}
+
+.card-body {
+  padding: 20px;
+}
+
+.card-title {
+  font-size: 18px;
   font-weight: 600;
   color: #111827;
-  margin: 0 0 12px;
-  transition: color 0.3s;
-}
-
-.solution-card:hover .card-name {
-  color: #ffffff;
+  margin: 0 0 10px;
+  line-height: 1.4;
 }
 
 .card-desc {
   font-size: 14px;
   color: #6b7280;
   line-height: 1.6;
-  margin: 0 0 20px;
-  transition: color 0.3s;
+  margin: 0 0 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.solution-card:hover .card-desc {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.card-stats {
+.card-footer {
   display: flex;
-  gap: 20px;
-  margin-bottom: 16px;
-  font-size: 13px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-date {
+  font-size: 12px;
   color: #9ca3af;
-  transition: color 0.3s;
-}
-
-.solution-card:hover .card-stats {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.card-stats strong {
-  color: #3b82f6;
-  transition: color 0.3s;
-}
-
-.solution-card:hover .card-stats strong {
-  color: #ffffff;
 }
 
 .card-link {
   font-size: 14px;
   font-weight: 500;
   color: #3b82f6;
-  transition: color 0.3s;
-}
-
-.solution-card:hover .card-link {
-  color: #ffffff;
 }
 
 .cta-section {
@@ -468,26 +271,8 @@ function goContact() {
 }
 
 @media (max-width: 1024px) {
-  .solutions-layout {
-    grid-template-columns: 1fr;
-    padding: 24px;
-  }
-  .solution-tabs {
-    flex-direction: row;
-    overflow-x: auto;
-  }
-  .solution-tab-btn {
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
   .solutions-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-  .feature-grid {
-    grid-template-columns: 1fr;
-  }
-  .solution-footer {
-    flex-wrap: wrap;
   }
 }
 

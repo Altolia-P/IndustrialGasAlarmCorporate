@@ -70,9 +70,15 @@ function handleImagesChange(files: File[]) {
   form.images = files
 }
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+
 function onCoverChange(e: Event) {
   const input = e.target as HTMLInputElement
   if (input.files && input.files[0]) {
+    if (input.files[0].size > MAX_FILE_SIZE) {
+      ElMessage.warning('文件大小不能超过5MB')
+      return
+    }
     handleCoverChange(input.files[0])
   }
 }
@@ -80,7 +86,12 @@ function onCoverChange(e: Event) {
 function onImagesChange(e: Event) {
   const input = e.target as HTMLInputElement
   if (input.files) {
-    handleImagesChange(Array.from(input.files))
+    const files = Array.from(input.files)
+    const oversized = files.filter(f => f.size > MAX_FILE_SIZE)
+    if (oversized.length > 0) {
+      ElMessage.warning(`${oversized.length} 个文件超过5MB限制，已自动跳过`)
+    }
+    handleImagesChange(files.filter(f => f.size <= MAX_FILE_SIZE))
   }
 }
 
@@ -106,10 +117,9 @@ async function handleSubmit() {
     fd.append('status', form.status)
     if (form.coverImage) fd.append('coverImage', form.coverImage)
     form.images.forEach((img) => fd.append('images', img))
-    form.attributes.forEach((attr, i) => {
-      fd.append(`attributes[${i}].attrKey`, attr.attrKey)
-      fd.append(`attributes[${i}].attrVal`, attr.attrVal)
-    })
+    if (form.attributes.length > 0) {
+      fd.append('attributesJson', JSON.stringify(form.attributes))
+    }
     if (isEdit.value) {
       await productApi.update(route.params.uuid as string, fd)
     } else {
@@ -159,7 +169,7 @@ function handleCancel() {
 
         <el-form-item label="封面图片">
           <div class="upload-area">
-            <input ref="coverInput" type="file" accept="image/jpeg,image/png,image/webp" style="display:none" @change="onCoverChange" />
+            <input ref="coverInput" type="file" accept="image/jpeg,image/jpg,image/png,image/webp" style="display:none" @change="onCoverChange" />
             <el-button type="primary" plain @click="coverInput?.click()">选择图片</el-button>
             <span v-if="form.coverImage" class="upload-name">{{ (form.coverImage as File).name }}</span>
             <span v-else class="upload-tip">支持 jpg、png、webp，≤5MB</span>
@@ -168,7 +178,7 @@ function handleCancel() {
 
         <el-form-item label="产品图片">
           <div class="upload-area">
-            <input ref="imagesInput" type="file" accept="image/jpeg,image/png,image/webp" multiple style="display:none" @change="onImagesChange" />
+            <input ref="imagesInput" type="file" accept="image/jpeg,image/jpg,image/png,image/webp" multiple style="display:none" @change="onImagesChange" />
             <el-button type="primary" plain @click="imagesInput?.click()">选择图片</el-button>
             <span class="upload-tip">支持多张，单张≤5MB</span>
           </div>

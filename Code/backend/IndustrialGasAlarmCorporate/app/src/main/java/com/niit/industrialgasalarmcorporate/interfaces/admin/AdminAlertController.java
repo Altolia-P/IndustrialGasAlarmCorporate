@@ -7,6 +7,8 @@ import com.niit.industrialgasalarmcorporate.common.base.Result;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import com.niit.industrialgasalarmcorporate.infrastructure.aop.LogOperation;
+
 @RestController
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor
@@ -30,21 +32,24 @@ public class AdminAlertController {
         return Result.ok(alertService.getAlert(uuid));
     }
 
-    @PostMapping("/alerts/{uuid}/confirm")
+    @LogOperation(operation = "CONFIRM", targetType = "ALERT")
+    @PutMapping("/alerts/{uuid}/confirm")
     public Result<Void> confirmAlert(@PathVariable String uuid,
-                                     @RequestParam String confirmedBy) {
-        alertService.confirmAlert(uuid, confirmedBy);
+                                     @RequestAttribute String username) {
+        alertService.confirmAlert(uuid, username);
         return Result.ok("报警已确认", null);
     }
 
-    @PostMapping("/alerts/{uuid}/resolve")
+    @LogOperation(operation = "RESOLVE", targetType = "ALERT")
+    @PutMapping("/alerts/{uuid}/resolve")
     public Result<Void> resolveAlert(@PathVariable String uuid,
-                                     @RequestParam String resolvedBy) {
-        alertService.resolveAlert(uuid, resolvedBy);
+                                     @RequestAttribute String username) {
+        alertService.resolveAlert(uuid, username);
         return Result.ok("报警已解决", null);
     }
 
-    @PostMapping("/alerts/{uuid}/close")
+    @LogOperation(operation = "CLOSE", targetType = "ALERT")
+    @PutMapping("/alerts/{uuid}/close")
     public Result<Void> closeAlert(@PathVariable String uuid) {
         alertService.closeAlert(uuid);
         return Result.ok("报警已关闭", null);

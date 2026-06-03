@@ -31,22 +31,18 @@ export const productApi = {
     return request.get('/admin/products', { params })
   },
   create(formData: FormData): Promise<ProductVO> {
-    return request.post('/admin/products', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    return request.post('/admin/products', formData)
   },
   update(uuid: string, formData: FormData): Promise<ProductVO> {
-    return request.put(`/admin/products/${uuid}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    return request.put(`/admin/products/${uuid}`, formData)
   },
   remove(uuid: string): Promise<null> {
     return request.delete(`/admin/products/${uuid}`)
   },
   publish(uuid: string): Promise<null> {
-    return request.post(`/admin/products/${uuid}/publish`)
+    return request.put(`/admin/products/${uuid}/publish`)
   },
   unpublish(uuid: string): Promise<null> {
-    return request.post(`/admin/products/${uuid}/unpublish`)
+    return request.put(`/admin/products/${uuid}/unpublish`)
   }
 }

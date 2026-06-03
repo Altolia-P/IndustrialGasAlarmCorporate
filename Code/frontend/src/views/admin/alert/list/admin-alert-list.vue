@@ -133,7 +133,7 @@ onMounted(() => fetchData())
             <el-button size="small" @click="handleDetail(row.alertUuid)">详情</el-button>
             <el-button v-if="row.status === AlertStatus.PENDING" size="small" type="primary" :loading="acting" @click="confirm(row.alertUuid)">确认</el-button>
             <el-button v-if="row.status === AlertStatus.CONFIRMED" size="small" type="success" :loading="acting" @click="resolve(row.alertUuid)">解决</el-button>
-            <el-button v-if="row.status !== AlertStatus.CLOSED" size="small" type="danger" :loading="acting" @click="closeAlert(row.alertUuid)">关闭</el-button>
+            <el-button v-if="row.status === AlertStatus.PENDING || row.status === AlertStatus.RESOLVED" size="small" type="danger" :loading="acting" @click="closeAlert(row.alertUuid)">关闭</el-button>
           </template>
         </el-table-column>
       </el-table>

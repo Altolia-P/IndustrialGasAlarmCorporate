@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { StaffRoleMap } from '@/types/staff'
@@ -46,6 +46,28 @@ const completePopoverUuid = ref('')
 const inlineRemark = ref('')
 const completing = ref(false)
 
+function onDocumentClick(e: MouseEvent) {
+  const target = e.target as HTMLElement | null
+  if (!target) return
+  if (assignPopoverUuid.value && !target.closest('.inline-assign-popover') && !target.closest('.el-select-dropdown') && !target.closest('.el-popper')) {
+    assignPopoverUuid.value = ''
+  }
+  if (completePopoverUuid.value && !target.closest('.inline-complete-popover') && !target.closest('.el-popper')) {
+    completePopoverUuid.value = ''
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', onDocumentClick, true)
+  if (route.query.status) searchForm.value.status = route.query.status as string
+  fetchMessages()
+  fetchStaffList()
+})
+
+onUnmounted(() => {
+  document.removeEventListener('mousedown', onDocumentClick, true)
+})
+
 function openDetail(row: MessageVO) {
   detailMessage.value = row
   detailDialogVisible.value = true
@@ -77,19 +99,18 @@ async function fetchStaffList() {
     staffList.value = page.content
   } catch {
     staffList.value = []
+    ElMessage.error('加载员工列表失败')
   }
 }
 
-onMounted(() => {
-  if (route.query.status) searchForm.value.status = route.query.status as string
-  fetchMessages()
-  fetchStaffList()
-})
-
-function openAssignPopover(uuid: string) {
-  assignPopoverUuid.value = uuid
-  assignStaffUuid.value = ''
-  staffRoleFilter.value = ''
+function toggleAssignPopover(uuid: string) {
+  if (assignPopoverUuid.value === uuid) {
+    assignPopoverUuid.value = ''
+  } else {
+    assignPopoverUuid.value = uuid
+    assignStaffUuid.value = ''
+    staffRoleFilter.value = ''
+  }
 }
 
 async function handleAssignInline(uuid: string) {
@@ -112,9 +133,13 @@ async function handleAssignInline(uuid: string) {
   }
 }
 
-function openCompletePopover(uuid: string) {
-  completePopoverUuid.value = uuid
-  inlineRemark.value = ''
+function toggleCompletePopover(uuid: string) {
+  if (completePopoverUuid.value === uuid) {
+    completePopoverUuid.value = ''
+  } else {
+    completePopoverUuid.value = uuid
+    inlineRemark.value = ''
+  }
 }
 
 async function handleCompleteInline(uuid: string) {
@@ -179,6 +204,7 @@ function handlePageChange(page: number) {
       <div class="search-left">
         <el-input v-model="searchForm.name" placeholder="姓名" clearable style="width:180px" @clear="handleSearch" @keyup.enter="handleSearch" />
         <el-select v-model="searchForm.status" placeholder="状态" clearable style="width:130px" @change="handleSearch">
+          <el-option label="全部" value="" />
           <el-option label="未处理" value="PENDING" />
           <el-option label="处理中" value="IN_PROGRESS" />
           <el-option label="已处理" value="PROCESSED" />
@@ -217,18 +243,17 @@ function handlePageChange(page: number) {
                 :visible="assignPopoverUuid === row.messageUuid"
                 placement="bottom"
                 :width="280"
-                trigger="click"
-                @show="openAssignPopover(row.messageUuid)"
-                @hide="assignPopoverUuid = ''"
+                trigger="manual"
               >
                 <template #reference>
-                  <el-link type="primary" :underline="false" @click.stop>
+                  <el-link type="primary" :underline="false" @click.stop="toggleAssignPopover(row.messageUuid)">
                     {{ row.assignedStaffName || '点击指派' }}
                   </el-link>
                 </template>
-                <div class="inline-assign-body" @click.stop>
+                <div class="inline-assign-body inline-assign-popover">
                   <div class="inline-assign-row">
                     <el-select v-model="staffRoleFilter" placeholder="职位筛选" clearable size="small" style="width:100%">
+                      <el-option label="全部" value="" />
                       <el-option v-for="(label, key) in StaffRoleMap" :key="key" :label="label" :value="key" />
                     </el-select>
                   </div>
@@ -260,14 +285,12 @@ function handlePageChange(page: number) {
                 :visible="completePopoverUuid === row.messageUuid"
                 placement="left"
                 :width="300"
-                trigger="click"
-                @show="openCompletePopover(row.messageUuid)"
-                @hide="completePopoverUuid = ''"
+                trigger="manual"
               >
                 <template #reference>
-                  <el-button size="small" type="success" @click.stop>标记完成</el-button>
+                  <el-button size="small" type="success" @click.stop="toggleCompletePopover(row.messageUuid)">标记完成</el-button>
                 </template>
-                <div class="inline-complete-body" @click.stop>
+                <div class="inline-complete-body inline-complete-popover">
                   <el-input
                     v-model="inlineRemark"
                     type="textarea"

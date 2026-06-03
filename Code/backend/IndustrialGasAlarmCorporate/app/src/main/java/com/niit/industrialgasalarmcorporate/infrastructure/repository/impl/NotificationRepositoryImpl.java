@@ -70,6 +70,11 @@ public class NotificationRepositoryImpl implements NotificationRepository {
     }
 
     @Override
+    public void deleteById(String notificationUuid) {
+        notificationMapper.deleteById(notificationUuid);
+    }
+
+    @Override
     public long countByChannelAndCreatedAfter(NotificationChannel channel, java.time.LocalDateTime since) {
         LambdaQueryWrapper<NotificationPO> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(NotificationPO::getChannel, channel.name())
@@ -81,9 +86,9 @@ public class NotificationRepositoryImpl implements NotificationRepository {
     public List<Notification> findRecentByChannel(NotificationChannel channel, int limit) {
         LambdaQueryWrapper<NotificationPO> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(NotificationPO::getChannel, channel.name())
-                .orderByDesc(NotificationPO::getCreatedAt)
-                .last("LIMIT " + limit);
-        return notificationMapper.selectList(wrapper).stream()
+                .orderByDesc(NotificationPO::getCreatedAt);
+        Page<NotificationPO> mpPage = new Page<>(1, limit);
+        return notificationMapper.selectPage(mpPage, wrapper).getRecords().stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
     }
@@ -115,6 +120,7 @@ public class NotificationRepositoryImpl implements NotificationRepository {
         po.setRetryCount(notification.getRetryCount());
         po.setErrorMessage(notification.getErrorMessage());
         po.setSentAt(notification.getSentAt());
+        po.setUpdatedAt(notification.getUpdatedAt());
         return po;
     }
 }

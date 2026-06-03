@@ -14,8 +14,8 @@ export function useLogin() {
     try {
       const data = await authApi.login({ username, password })
       onLoginSuccess(data)
-    } catch (err: any) {
-      ElMessage.error(err?.message || '账号或密码错误')
+    } catch (err: unknown) {
+      ElMessage.error((err as { message?: string })?.message || '账号或密码错误')
       stop()
     }
   }
@@ -25,13 +25,17 @@ export function useLogin() {
     ElMessage.success('登录成功')
     stop()
     const redirect = router.currentRoute.value.query.redirect as string
-    if (redirect) {
+    if (redirect && isValidRedirect(redirect)) {
       router.push(redirect)
       return
     }
     router.push(
       data.role === 'ADMIN' ? '/admin' : data.role === 'STAFF' ? '/staff' : '/user'
     )
+  }
+
+  function isValidRedirect(path: string): boolean {
+    return path.startsWith('/') && !path.startsWith('//') && !path.startsWith('\\\\')
   }
 
   return { loading, login }

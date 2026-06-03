@@ -1,6 +1,8 @@
 export interface LoginDTO {
   username: string
   password: string
+  captcha?: string
+  captchaToken?: string
 }
 
 export interface LoginWithCaptchaDTO {
@@ -32,6 +34,7 @@ export interface CaptchaVO {
 export interface ResetPasswordDTO {
   username: string
   newPassword: string
+  adminPassword: string
 }
 
 export interface UserVO {

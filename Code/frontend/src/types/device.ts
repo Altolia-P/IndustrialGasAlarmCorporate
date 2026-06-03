@@ -46,7 +46,7 @@ export interface DeviceVO {
   alertThreshold: string | null
   status: string
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
 }
 
 export interface DeviceDataPointVO {
@@ -56,7 +56,7 @@ export interface DeviceDataPointVO {
   battery: string | null
   temperature: string | null
   humidity: string | null
-  signalStrength: number
+  signalStrength: number | null
   createdAt: string
 }
 
@@ -96,7 +96,6 @@ export interface AlertRuleVO {
   autoCreateWorkOrder: boolean
   enabled: boolean
   createdAt: string
-  updatedAt: string
 }
 
 export enum AlertStatus {
@@ -135,7 +134,6 @@ export interface AlertVO {
   resolvedBy: string | null
   workOrderUuid: string | null
   createdAt: string
-  updatedAt: string
 }
 
 export interface NotificationVO {

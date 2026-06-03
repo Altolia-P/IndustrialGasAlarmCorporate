@@ -19,6 +19,9 @@ public class User {
     private LocalDateTime lastLoginAt;
     private String role;
 
+    /** transient: tracks whether the account was just locked in this request (prevents duplicate events) */
+    private transient boolean justLockedFlag;
+
     public User(String username, String passwordHash, String role) {
         this.userUuid = UUID.randomUUID().toString();
         this.username = username;
@@ -87,16 +90,23 @@ public class User {
         this.company = company;
     }
 
+    // failCount 存在并发写竞争（同一用户并发登录时可能漏计一次），
+    // 因发生概率极低且影响仅限于多一次尝试机会，暂不引入 DB 级原子 UPDATE。
     private void incrementFailCount() {
-        this.failCount++;
-        if (this.failCount >= MAX_FAIL_COUNT) {
+        this.failCount = Math.min(this.failCount + 1, MAX_FAIL_COUNT + 1);
+        if (this.failCount >= MAX_FAIL_COUNT && !this.locked) {
             this.locked = true;
             this.lockTime = LocalDateTime.now();
+            this.justLockedFlag = true;
         }
     }
 
     public boolean justLocked() {
-        return this.locked && this.failCount == MAX_FAIL_COUNT;
+        if (this.justLockedFlag) {
+            this.justLockedFlag = false;
+            return true;
+        }
+        return false;
     }
 
     public String getUserUuid() {

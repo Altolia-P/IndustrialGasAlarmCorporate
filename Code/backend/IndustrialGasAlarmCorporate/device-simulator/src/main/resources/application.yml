@@ -1,16 +1,16 @@
 server:
-  port: 8081
+  port: 8082
 
 simulator:
   enabled: true
   interval-ms: 5000
-  target-url: http://localhost:8080/api/v1/public/device-data
+  target-url: http://localhost:8081/api/v1/collect/device-data
   devices:
-    - device-uuid: "4c165b10-cff5-4290-befa-ec4cc4e66f46"
+    - device-uuid: "demo-sim-001"
       gas-type: CH4
       concentration:
         min: 0.0
-        max: 3.0
+        max: 5.0
       battery:
         min: 3.2
         max: 4.2
@@ -20,8 +20,11 @@ simulator:
       humidity:
         min: 30.0
         max: 70.0
-    - device-uuid: "4c165b10-cff5-4290-befa-ec4cc4e66f46"
+    - device-uuid: "demo-sim-002"
       gas-type: H2S
+      concentration:
+        min: 0.0
+        max: 8.0
       battery:
         min: 3.0
         max: 4.0
@@ -31,6 +34,20 @@ simulator:
       humidity:
         min: 25.0
         max: 65.0
+    - device-uuid: "demo-sim-003"
+      gas-type: CO
+      concentration:
+        min: 0.0
+        max: 45.0
+      battery:
+        min: 3.1
+        max: 4.1
+      temperature:
+        min: 25.0
+        max: 45.0
+      humidity:
+        min: 35.0
+        max: 60.0
 
 logging:
   level:

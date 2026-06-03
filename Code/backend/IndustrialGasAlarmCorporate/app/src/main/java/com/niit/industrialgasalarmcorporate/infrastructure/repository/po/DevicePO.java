@@ -18,6 +18,8 @@ public class DevicePO {
 
     private String serialNumber;
 
+    private String apiToken;
+
     private String name;
 
     private String model;

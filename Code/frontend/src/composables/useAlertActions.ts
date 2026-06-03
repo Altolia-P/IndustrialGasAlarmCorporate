@@ -13,12 +13,17 @@ export function useAlertActions(onSuccess: () => void) {
         cancelButtonText: '取消',
         type: 'info'
       })
-      acting.value = true
+    } catch {
+      return // user cancelled the dialog
+    }
+    acting.value = true
+    try {
       await alertApi.confirm(uuid)
       ElMessage.success('报警已确认')
       onSuccess()
-    } catch {
-      // cancelled
+    } catch (e: unknown) {
+      const err = e as { message?: string }
+      ElMessage.error(err.message || '确认失败')
     } finally {
       acting.value = false
     }
@@ -31,12 +36,17 @@ export function useAlertActions(onSuccess: () => void) {
         cancelButtonText: '取消',
         type: 'success'
       })
-      acting.value = true
+    } catch {
+      return // user cancelled the dialog
+    }
+    acting.value = true
+    try {
       await alertApi.resolve(uuid)
       ElMessage.success('报警已解决')
       onSuccess()
-    } catch {
-      // cancelled
+    } catch (e: unknown) {
+      const err = e as { message?: string }
+      ElMessage.error(err.message || '解决失败')
     } finally {
       acting.value = false
     }
@@ -49,12 +59,17 @@ export function useAlertActions(onSuccess: () => void) {
         cancelButtonText: '取消',
         type: 'warning'
       })
-      acting.value = true
+    } catch {
+      return // user cancelled the dialog
+    }
+    acting.value = true
+    try {
       await alertApi.close(uuid)
       ElMessage.success('报警已关闭')
       onSuccess()
-    } catch {
-      // cancelled
+    } catch (e: unknown) {
+      const err = e as { message?: string }
+      ElMessage.error(err.message || '关闭失败')
     } finally {
       acting.value = false
     }

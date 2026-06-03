@@ -20,7 +20,7 @@ export const authApi = {
   logout(): Promise<null> {
     return request.post('/admin/logout')
   },
-  resetPassword(dto: ResetPasswordDTO): Promise<null> {
+  resetPassword(dto: { oldPassword: string; newPassword: string }): Promise<null> {
     return request.post('/user/resetPassword', dto)
   },
   updateProfile(dto: UpdateProfileDTO): Promise<UserVO> {

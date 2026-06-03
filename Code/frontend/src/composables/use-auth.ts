@@ -15,7 +15,15 @@ export function useAuth() {
 
   function redirectAfterLogin() {
     const redirect = router.currentRoute.value.query.redirect as string
-    router.push(redirect || { name: 'AdminDashboard' })
+    if (redirect && isValidRedirect(redirect)) {
+      router.push(redirect)
+    } else {
+      router.push({ name: 'AdminDashboard' })
+    }
+  }
+
+  function isValidRedirect(path: string): boolean {
+    return path.startsWith('/') && !path.startsWith('//') && !path.startsWith('\\\\')
   }
 
   return { requireAuth, redirectAfterLogin, isLoggedIn: authStore.isLoggedIn }

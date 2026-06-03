@@ -2,7 +2,6 @@ package com.niit.industrialgasalarmcorporate.interfaces.pub;
 
 import com.niit.industrialgasalarmcorporate.application.message.dto.SubmitMessageDTO;
 import com.niit.industrialgasalarmcorporate.application.message.service.MessageService;
-import com.niit.industrialgasalarmcorporate.application.message.vo.MessageVO;
 import com.niit.industrialgasalarmcorporate.common.base.Result;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -24,10 +23,5 @@ public class MessageController {
         String ip = request.getRemoteAddr();
         String messageUuid = messageService.submitMessage(dto, ip);
         return Result.ok("提交成功，我们将尽快联系您", Map.of("messageUuid", messageUuid));
-    }
-
-    @GetMapping("/messages/{uuid}")
-    public Result<MessageVO> getMessage(@PathVariable String uuid) {
-        return Result.ok(messageService.getMessage(uuid));
     }
 }

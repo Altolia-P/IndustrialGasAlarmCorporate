@@ -7,6 +7,7 @@ import com.niit.industrialgasalarmcorporate.application.auth.vo.CaptchaVO;
 import com.niit.industrialgasalarmcorporate.application.auth.vo.LoginResultVO;
 import com.niit.industrialgasalarmcorporate.application.auth.vo.UserVO;
 import com.niit.industrialgasalarmcorporate.common.base.Result;
+import com.niit.industrialgasalarmcorporate.common.enums.ErrorCode;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -34,13 +35,16 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public Result<Void> logout(@RequestHeader("Authorization") String authHeader) {
+    public Result<Void> logout(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ") || authHeader.length() < 7) {
+            return Result.fail(ErrorCode.UNAUTHORIZED.getCode(), "未登录");
+        }
         String token = authHeader.substring(7);
         authService.logout(token);
         return Result.ok("已登出", null);
     }
 
-    @PostMapping("/resetPassword")
+    @PutMapping("/resetPassword")
     public Result<Void> resetPassword(@Valid @RequestBody ResetPasswordDTO dto) {
         authService.resetPassword(dto);
         return Result.ok("密码重置成功", null);

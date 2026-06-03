@@ -18,4 +18,6 @@ public interface ContentRepository {
     Page<Content> findAllWithFilter(String title, ContentType type, String categoryUuid, String status, int page, int size);
 
     List<Content> searchByKeyword(String keyword, int limit);
+
+    long countByCategoryUuid(String categoryUuid);
 }

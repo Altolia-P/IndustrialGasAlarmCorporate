@@ -4,11 +4,14 @@ import com.niit.industrialgasalarmcorporate.common.base.Page;
 
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 
 public interface AlertRepository {
 
     Optional<Alert> findById(String alertUuid);
+
+    Optional<Alert> findByWorkOrderUuid(String workOrderUuid);
 
     Page<Alert> findByDeviceUuid(String deviceUuid, int page, int size);
 

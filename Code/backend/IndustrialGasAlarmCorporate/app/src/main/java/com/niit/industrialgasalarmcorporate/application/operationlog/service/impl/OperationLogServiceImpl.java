@@ -22,10 +22,10 @@ public class OperationLogServiceImpl implements OperationLogService {
     @Transactional
     public void record(String operatorUuid, String operatorName, String operation,
                        String targetType, String targetId, String targetName,
-                       String detail, String ip) {
+                       String detail, String businessPurpose, String ip) {
         OperationLog log = new OperationLog(
                 operatorUuid, operatorName, operation, targetType,
-                targetId, targetName, detail, ip);
+                targetId, targetName, detail, businessPurpose, ip);
         repository.save(log);
     }
 

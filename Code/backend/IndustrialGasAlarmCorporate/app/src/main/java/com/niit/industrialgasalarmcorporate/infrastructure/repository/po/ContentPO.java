@@ -28,6 +28,9 @@ public class ContentPO {
 
     private String categoryUuid;
 
+    @Version
+    private Integer version;
+
     @TableLogic
     private Integer deleted;
 

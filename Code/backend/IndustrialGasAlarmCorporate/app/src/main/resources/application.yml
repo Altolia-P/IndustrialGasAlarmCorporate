@@ -2,10 +2,10 @@ server:
   port: 8080
 
 spring:
+  main:
+    allow-bean-definition-overriding: true
   profiles:
     active: local
-  application:
-    name: IndustrialGasAlarmCorporate
 
   sql:
     init:
@@ -36,6 +36,12 @@ spring:
       time-to-live: 3600000          # 默认缓存1小时
       cache-null-values: false
 
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
   servlet:
     multipart:
       max-file-size: 5MB
@@ -53,7 +59,7 @@ mybatis-plus:
     map-underscore-to-camel-case: true
 
 jwt:
-  secret: ${JWT_SECRET:change-me-to-a-secure-random-string-at-least-256-bits}
+  secret: ${JWT_SECRET:}
   expiration: 86400000               # 24小时 (ms)
 
 # 事件发件箱轮询（MVP 阶段关闭，微服务拆分后开启）
@@ -74,7 +80,23 @@ file:
     allowed-extensions: jpg, jpeg, png, webp
     max-size: 5242880                 # 5MB
 
+# CORS 跨域配置（生产环境在 application-prod.yml 中覆盖）
+app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:*}
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+    allowed-headers: Authorization,Content-Type,X-Trace-Id
+    max-age: 3600
+
+# API Token 认证（X-API-Key）
+api-token-filter:
+  shared-key: ${API_TOKEN_SHARED_KEY:}
+  dev-mode: ${API_TOKEN_DEV_MODE:false}
+  dev-token: ${API_TOKEN_DEV_TOKEN:}
+
 logging:
+  file:
+    path: ./logs
   level:
     com.niit.industrialgasalarmcorporate: DEBUG
     com.baomidou.mybatisplus: INFO

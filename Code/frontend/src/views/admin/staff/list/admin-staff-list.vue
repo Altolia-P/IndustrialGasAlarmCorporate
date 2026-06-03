@@ -109,9 +109,11 @@ function handlePageChange(page: number) {
       <div class="search-left">
         <el-input v-model="searchForm.name" placeholder="员工姓名" clearable style="width:180px" @clear="handleSearch" @keyup.enter="handleSearch" />
         <el-select v-model="searchForm.role" placeholder="岗位分类" clearable style="width:160px" @change="handleSearch">
+          <el-option label="全部" value="" />
           <el-option v-for="(label, key) in StaffRoleMap" :key="key" :label="label" :value="key" />
         </el-select>
         <el-select v-model="searchForm.status" placeholder="工作状态" clearable style="width:130px" @change="handleSearch">
+          <el-option label="全部" value="" />
           <el-option label="休假" value="VACATION" />
           <el-option label="待班" value="STANDBY" />
           <el-option label="工作中" value="WORKING" />

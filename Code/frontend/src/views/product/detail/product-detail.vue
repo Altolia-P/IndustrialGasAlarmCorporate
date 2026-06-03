@@ -13,9 +13,9 @@ interface ProductDetailData {
   category: string
   description: string
   image: string
+  images: string[]
   features: string[]
   params: { name: string; value: string }[]
-  body: string
 }
 
 const fallbackProduct: ProductDetailData = {
@@ -23,6 +23,7 @@ const fallbackProduct: ProductDetailData = {
   category: '气体检测仪',
   description: '新一代四合一复合气体检测仪，可同时检测可燃气体、氧气、一氧化碳和硫化氢等四种气体。采用先进的电化学传感器技术，具备IP67防护等级和本安防爆认证，广泛应用于石油化工、冶金、消防等领域。',
   image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&h=600&fit=crop',
+  images: [] as string[],
   features: ['四合一气体检测', 'IP67防护等级', '本安防爆认证', '10小时续航', '声光震动报警', '数据记录功能'],
   params: [
     { name: '检测气体', value: '可燃气体、O₂、CO、H₂S' },
@@ -35,11 +36,11 @@ const fallbackProduct: ProductDetailData = {
     { name: '工作温度', value: '-40℃ ~ +70℃' },
     { name: '电池续航', value: '≥10小时' },
     { name: '数据存储', value: '1000条报警记录' }
-  ],
-  body: '<p>IS-200复合气体检测仪是公司自主研发的新一代便携式多气体检测设备。本产品采用模块化传感器设计，可根据用户需求灵活配置检测气体种类，最多可同时检测4种气体。</p><p>产品采用高强度工程塑料外壳，具备优异的抗冲击性能和防水防尘能力。2.4英寸高清彩色液晶屏，可同时显示四种气体的实时浓度值、报警状态、电池电量和工作状态。</p><p>内置大容量可充电锂电池，充满电后可连续工作10小时以上。支持USB充电和数据导出，可通过专用软件查看历史记录和趋势分析。</p>'
+  ]
 }
 
 const product = ref<ProductDetailData>(fallbackProduct)
+const lightboxImage = ref<string | null>(null)
 const { loading, start, stop } = useLoading()
 
 async function fetchProduct() {
@@ -53,9 +54,9 @@ async function fetchProduct() {
       category: detail.categoryName,
       description: detail.description,
       image: detail.coverImage || fallbackProduct.image,
-      features: [],
-      params: [],
-      body: detail.body || ''
+      images: (detail.images || []).map(img => img.url),
+      features: (detail.attributes || []).map(a => a.attrVal),
+      params: (detail.attributes || []).map(a => ({ name: a.attrKey, value: a.attrVal }))
     }
   } catch {
     product.value = fallbackProduct
@@ -76,6 +77,10 @@ const relatedProducts = [
 
 function goContact() {
   router.push('/contact')
+}
+
+function goProduct(uuid: string) {
+  router.push(`/products/${uuid}`)
 }
 </script>
 
@@ -105,8 +110,24 @@ function goContact() {
             </div>
             <div class="detail-actions">
               <el-button type="primary" size="large" round @click="goContact">立即咨询</el-button>
-              <el-button size="large" round class="btn-secondary">下载规格书</el-button>
+              <el-button size="large" round class="btn-secondary" @click="router.push('/support')">下载规格书</el-button>
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="product.images.length > 0" class="gallery-section">
+      <div class="container">
+        <h2 class="section-title">产品图片</h2>
+        <div class="gallery-grid">
+          <div
+            v-for="(img, i) in product.images"
+            :key="i"
+            class="gallery-item"
+            @click="lightboxImage = img"
+          >
+            <img :src="img" :alt="`${product.name} - ${i + 1}`" class="gallery-thumb" />
           </div>
         </div>
       </div>
@@ -116,10 +137,7 @@ function goContact() {
       <div class="container">
         <div class="content-grid">
           <div class="content-main">
-            <h2 class="section-title">产品详情</h2>
-            <div class="body-content" v-html="product.body"></div>
-
-            <h2 class="section-title" style="margin-top:48px">技术参数</h2>
+            <h2 class="section-title">技术参数</h2>
             <div class="params-table">
               <div v-for="p in product.params" :key="p.name" class="param-row">
                 <span class="param-name">{{ p.name }}</span>
@@ -132,7 +150,7 @@ function goContact() {
             <div class="sidebar-card">
               <h3 class="sidebar-title">相关产品</h3>
               <div class="related-list">
-                <div v-for="rp in relatedProducts" :key="rp.id" class="related-item">
+                <div v-for="rp in relatedProducts" :key="rp.id" class="related-item" @click="goProduct(rp.id)">
                   <span class="related-icon">{{ rp.icon }}</span>
                   <div class="related-info">
                     <span class="related-name">{{ rp.name }}</span>
@@ -150,6 +168,15 @@ function goContact() {
         </div>
       </div>
     </section>
+
+    <Teleport to="body">
+      <div v-if="lightboxImage" class="lightbox-overlay" @click="lightboxImage = null">
+        <div class="lightbox-container">
+          <img :src="lightboxImage" class="lightbox-img" @click.stop />
+          <button class="lightbox-close" @click="lightboxImage = null">✕</button>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -274,16 +301,6 @@ function goContact() {
   border-bottom: 2px solid #3b82f6;
 }
 
-.body-content {
-  font-size: 16px;
-  color: #4b5563;
-  line-height: 1.9;
-}
-
-.body-content :deep(p) {
-  margin: 0 0 16px;
-}
-
 .params-table {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
@@ -402,6 +419,84 @@ function goContact() {
   width: 100%;
 }
 
+.gallery-section {
+  padding: 0 0 80px;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.gallery-item {
+  aspect-ratio: 4/3;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.25s;
+}
+
+.gallery-item:hover {
+  border-color: #3b82f6;
+}
+
+.gallery-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #f3f4f6;
+  transition: transform 0.3s;
+}
+
+.gallery-item:hover .gallery-thumb {
+  transform: scale(1.05);
+}
+
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.lightbox-container {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.lightbox-img {
+  max-width: 90vw;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 8px;
+  cursor: default;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: -48px;
+  right: 0;
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 8px;
+  line-height: 1;
+  transition: opacity 0.2s;
+}
+
+.lightbox-close:hover {
+  opacity: 0.7;
+}
+
 @media (max-width: 1024px) {
   .detail-grid {
     grid-template-columns: 1fr;
@@ -424,6 +519,9 @@ function goContact() {
   }
   .param-row {
     grid-template-columns: 120px 1fr;
+  }
+  .gallery-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 </style>

@@ -7,7 +7,7 @@ import { usePagination } from '@/composables/use-pagination'
 import type { DownloadFileVO } from '@/types/download-file'
 
 const { loading, start: startLoading, stop: stopLoading } = useLoading()
-const { state: pagination, setTotal, goToPage } = usePagination(20)
+const { state: pagination, backendPage, setTotal, goToPage } = usePagination(20)
 const files = ref<DownloadFileVO[]>([])
 
 const uploadVisible = ref(false)
@@ -19,7 +19,7 @@ async function fetchFiles() {
   startLoading()
   try {
     const result = await downloadFileApi.getAdminList({
-      page: pagination.value.page,
+      page: backendPage.value,
       size: pagination.value.size
     })
     files.value = result.content

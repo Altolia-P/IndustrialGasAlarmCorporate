@@ -28,6 +28,8 @@ public class OperationLogPO {
 
     private String detail;
 
+    private String businessPurpose;
+
     private String ip;
 
     @TableField(fill = FieldFill.INSERT)

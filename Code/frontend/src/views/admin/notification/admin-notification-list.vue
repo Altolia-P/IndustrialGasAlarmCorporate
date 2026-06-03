@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { alertApi } from '@/api/device'
 import type { NotificationVO } from '@/types/device'
 import type { Page } from '@/types/common'
@@ -39,6 +39,22 @@ function handlePageChange(page: number) {
   fetchNotifications()
 }
 
+async function handleDelete(uuid: string) {
+  try {
+    await ElMessageBox.confirm('确认删除该通知记录？', '删除确认', { type: 'warning' })
+  } catch {
+    return
+  }
+  try {
+    await alertApi.deleteNotification(uuid)
+    ElMessage.success('删除成功')
+    fetchNotifications()
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    ElMessage.error(err.message || '删除失败')
+  }
+}
+
 onMounted(fetchNotifications)
 </script>
 
@@ -74,6 +90,11 @@ onMounted(fetchNotifications)
         </el-table-column>
         <el-table-column label="发送时间" width="170" prop="sentAt" />
         <el-table-column label="创建时间" width="170" prop="createdAt" />
+        <el-table-column label="操作" width="80" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" type="danger" @click="handleDelete(row.notificationUuid)">删除</el-button>
+          </template>
+        </el-table-column>
       </el-table>
 
       <div class="pagination-wrapper">

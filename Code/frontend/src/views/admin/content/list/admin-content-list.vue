@@ -88,7 +88,7 @@ const contentExportCols = [
   { header: '类型', key: 'type' },
   { header: '分类', key: 'categoryName' },
   { header: '状态', key: 'status' },
-  { header: '发布时间', key: 'publishedAt' },
+  { header: '更新时间', key: 'updatedAt' },
   { header: '创建时间', key: 'createdAt' }
 ]
 

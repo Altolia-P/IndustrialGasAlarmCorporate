@@ -36,6 +36,9 @@ public class ContactMessagePO {
 
     private LocalDateTime processedAt;
 
+    @Version
+    private Integer version;
+
     @TableLogic
     private Integer deleted;
 

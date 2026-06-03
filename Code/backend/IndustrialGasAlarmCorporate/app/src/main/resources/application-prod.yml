@@ -1,0 +1,93 @@
+# ============================================================
+# 生产环境配置
+# 所有敏感值通过环境变量注入，禁止硬编码
+# ============================================================
+
+server:
+  port: ${SERVER_PORT:8080}
+  # 生产环境关闭错误堆栈暴露
+  error:
+    include-stacktrace: never
+    include-message: never
+
+spring:
+  profiles:
+    active: prod
+
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/industrial_gas_alarm_corp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 10000
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 4
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+# 生产环境 CORS — 仅允许指定域名
+app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:https://your-domain.com}
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+    allowed-headers: Authorization,Content-Type,X-Trace-Id
+    max-age: 3600
+
+jwt:
+  secret: ${JWT_SECRET:}
+  expiration: 86400000
+
+# 事件发件箱（微服务拆分后开启）
+event-outbox:
+  enabled: ${EVENT_OUTBOX_ENABLED:false}
+
+# 操作日志
+operation-log:
+  enabled: true
+  retention-days: ${LOG_RETENTION_DAYS:180}
+
+# 文件上传（生产使用绝对路径或对象存储）
+file:
+  upload:
+    path: ${UPLOAD_PATH:/data/industrial-gas-alarm/uploads}
+    allowed-extensions: jpg, jpeg, png, webp
+    max-size: 5242880
+
+# API Token 认证
+api-token-filter:
+  shared-key: ${API_TOKEN_SHARED_KEY:}
+  dev-mode: false
+
+# DeepSeek AI 配置
+deepseek:
+  api-key: ${DEEPSEEK_API_KEY:}
+  base-url: https://api.deepseek.com
+  model-name: deepseek-v4-flash
+  max-tokens: 2000
+  timeout-seconds: 20
+
+logging:
+  level:
+    com.niit.industrialgasalarmcorporate: ${APP_LOG_LEVEL:INFO}
+    com.baomidou.mybatisplus: WARN
+    org.springframework.security: WARN

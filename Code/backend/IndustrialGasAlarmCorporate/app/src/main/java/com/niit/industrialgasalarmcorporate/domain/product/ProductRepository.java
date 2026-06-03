@@ -20,4 +20,6 @@ public interface ProductRepository {
     Page<Product> findAllWithFilter(String name, String categoryUuid, String status, int page, int size);
 
     List<Product> searchByKeyword(String keyword, int limit);
+
+    long countByCategoryUuid(String categoryUuid);
 }

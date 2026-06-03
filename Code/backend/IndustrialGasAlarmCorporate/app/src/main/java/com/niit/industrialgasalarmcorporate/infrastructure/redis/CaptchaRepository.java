@@ -21,10 +21,7 @@ public class CaptchaRepository {
 
     public String getAndRemove(String token) {
         String key = CAPTCHA_PREFIX + token;
-        String text = (String) redisTemplate.opsForValue().get(key);
-        if (text != null) {
-            redisTemplate.delete(key);
-        }
+        String text = (String) redisTemplate.opsForValue().getAndDelete(key);
         return text;
     }
 }

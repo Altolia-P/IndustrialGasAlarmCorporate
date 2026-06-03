@@ -13,12 +13,13 @@ public class OperationLog {
     private final String targetId;
     private String targetName;
     private String detail;
+    private String businessPurpose;
     private final String ip;
     private final LocalDateTime createdAt;
 
     public OperationLog(String operatorUuid, String operatorName, String operation,
                         String targetType, String targetId, String targetName,
-                        String detail, String ip) {
+                        String detail, String businessPurpose, String ip) {
         this.logId = UUID.randomUUID().toString();
         this.operatorUuid = operatorUuid;
         this.operatorName = operatorName;
@@ -27,13 +28,15 @@ public class OperationLog {
         this.targetId = targetId;
         this.targetName = targetName;
         this.detail = detail;
+        this.businessPurpose = businessPurpose;
         this.ip = ip;
         this.createdAt = LocalDateTime.now();
     }
 
     public OperationLog(String logId, String operatorUuid, String operatorName,
                         String operation, String targetType, String targetId,
-                        String targetName, String detail, String ip, LocalDateTime createdAt) {
+                        String targetName, String detail, String businessPurpose,
+                        String ip, LocalDateTime createdAt) {
         this.logId = logId;
         this.operatorUuid = operatorUuid;
         this.operatorName = operatorName;
@@ -42,6 +45,7 @@ public class OperationLog {
         this.targetId = targetId;
         this.targetName = targetName;
         this.detail = detail;
+        this.businessPurpose = businessPurpose;
         this.ip = ip;
         this.createdAt = createdAt;
     }
@@ -54,6 +58,7 @@ public class OperationLog {
     public String getTargetId() { return targetId; }
     public String getTargetName() { return targetName; }
     public String getDetail() { return detail; }
+    public String getBusinessPurpose() { return businessPurpose; }
     public String getIp() { return ip; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

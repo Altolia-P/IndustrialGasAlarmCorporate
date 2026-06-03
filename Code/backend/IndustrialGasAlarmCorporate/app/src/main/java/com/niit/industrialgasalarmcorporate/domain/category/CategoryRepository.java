@@ -14,4 +14,6 @@ public interface CategoryRepository {
     void save(Category category);
 
     void delete(String categoryUuid);
+
+    List<Category> findByParentUuid(String parentUuid);
 }

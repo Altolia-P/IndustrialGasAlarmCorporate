@@ -13,6 +13,7 @@ public class OperationLogVO {
     private String targetId;
     private String targetName;
     private String detail;
+    private String businessPurpose;
     private String ip;
     private String createdAt;
 }

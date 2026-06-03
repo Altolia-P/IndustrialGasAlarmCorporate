@@ -6,10 +6,14 @@ import { authApi } from '@/api/auth'
 
 const authStore = useAuthStore()
 
-const passwordForm = reactive({ newPassword: '', confirmPassword: '' })
+const passwordForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
 const changingPwd = ref(false)
 
 async function changePassword() {
+  if (!passwordForm.oldPassword) {
+    ElMessage.warning('请输入旧密码')
+    return
+  }
   if (!passwordForm.newPassword) {
     ElMessage.warning('请输入新密码')
     return
@@ -18,13 +22,18 @@ async function changePassword() {
     ElMessage.warning('两次新密码输入不一致')
     return
   }
-  if (passwordForm.newPassword.length < 6) {
-    ElMessage.warning('新密码长度不能少于6位')
+  if (passwordForm.newPassword.length < 8) {
+    ElMessage.warning('新密码长度不能少于8位')
+    return
+  }
+  if (!/[0-9]/.test(passwordForm.newPassword) || !/[a-zA-Z]/.test(passwordForm.newPassword)) {
+    ElMessage.warning('新密码需同时包含字母和数字')
     return
   }
   changingPwd.value = true
   try {
-    await authApi.resetPassword({ username: authStore.username, newPassword: passwordForm.newPassword })
+    await authApi.resetPassword({ oldPassword: passwordForm.oldPassword, newPassword: passwordForm.newPassword })
+    passwordForm.oldPassword = ''
     passwordForm.newPassword = ''
     passwordForm.confirmPassword = ''
     ElMessage.success('密码修改成功')
@@ -79,8 +88,11 @@ onMounted(() => {
     <div class="form-card">
       <div class="card-section-title">修改密码</div>
       <el-form :model="passwordForm" label-width="100px">
+        <el-form-item label="旧密码">
+          <el-input v-model="passwordForm.oldPassword" type="password" show-password placeholder="请输入当前密码" />
+        </el-form-item>
         <el-form-item label="新密码">
-          <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="至少6位字符" />
+          <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="含字母和数字，至少8位" />
         </el-form-item>
         <el-form-item label="确认新密码">
           <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="再次输入新密码" />

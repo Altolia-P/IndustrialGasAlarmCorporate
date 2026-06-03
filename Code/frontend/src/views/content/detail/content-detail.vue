@@ -1,15 +1,57 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { solutionDetailMap } from '@/data/solutions'
+import DOMPurify from 'dompurify'
+import { contentApi } from '@/api/content'
+import { ContentType } from '@/types/content'
+import type { ContentDetailVO, ContentVO } from '@/types/content'
 
 const router = useRouter()
 const route = useRoute()
 
-const data = computed(() => {
-  const id = (route.params.uuid as string) || 'petrochemical'
-  return solutionDetailMap[id] || solutionDetailMap.petrochemical
+const solution = ref<ContentDetailVO | null>(null)
+const relatedSolutions = ref<ContentVO[]>([])
+const loading = ref(false)
+const loadingRelated = ref(false)
+
+async function fetchDetail() {
+  loading.value = true
+  try {
+    const data = await contentApi.getPublicDetail(route.params.uuid as string)
+    solution.value = { ...data, body: DOMPurify.sanitize(data.body) }
+  } catch {
+    solution.value = null
+  } finally {
+    loading.value = false
+  }
+}
+
+async function fetchRelated() {
+  loadingRelated.value = true
+  try {
+    const page = await contentApi.getPublicList({ type: ContentType.SOLUTION, size: 4 })
+    relatedSolutions.value = page.content
+      .filter((c) => c.contentUuid !== route.params.uuid)
+      .slice(0, 3)
+  } catch {
+    relatedSolutions.value = []
+  } finally {
+    loadingRelated.value = false
+  }
+}
+
+onMounted(() => {
+  fetchDetail()
+  fetchRelated()
 })
+
+function goSolution(uuid: string) {
+  router.push(`/solutions/${uuid}`)
+}
+
+function goList() {
+  router.push('/solutions')
+}
 
 function goContact() {
   router.push('/contact')
@@ -18,85 +60,71 @@ function goContact() {
 
 <template>
   <div class="solution-detail-page">
-    <section class="hero-section">
-      <div class="container">
-        <div class="hero-badge">
-          <span class="badge-icon">{{ data.icon }}</span>
-          行业解决方案
-        </div>
-        <h1 class="page-title">{{ data.title }}</h1>
-        <p class="page-desc">{{ data.description }}</p>
-      </div>
-    </section>
+    <div v-if="loading" class="loading-state">
+      <p>加载中...</p>
+    </div>
 
-    <section class="challenges-section">
-      <div class="container">
-        <h2 class="section-title">行业挑战</h2>
-        <div class="challenges-grid">
-          <div v-for="c in data.challenges" :key="c.title" class="challenge-card">
-            <h3 class="challenge-name">{{ c.title }}</h3>
-            <p class="challenge-desc">{{ c.desc }}</p>
+    <div v-else-if="!solution" class="error-state">
+      <p>解决方案不存在或已删除</p>
+      <el-button size="large" round @click="goList">返回列表</el-button>
+    </div>
+
+    <template v-else>
+      <section class="hero-section">
+        <div class="container">
+          <div class="hero-breadcrumb">
+            <span class="breadcrumb-link" @click="goList">解决方案</span>
+            <span class="breadcrumb-sep">/</span>
+            <span class="breadcrumb-current">{{ solution.categoryName }}</span>
+          </div>
+          <div class="hero-badge">行业解决方案</div>
+          <h1 class="page-title">{{ solution.title }}</h1>
+          <div class="hero-meta">
+            <span class="meta-date">{{ solution.createdAt }}</span>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="solution-section section-gray">
-      <div class="container">
-        <h2 class="section-title">解决方案</h2>
-        <div class="solution-steps">
-          <div v-for="(s, i) in data.solution" :key="s.title" class="solution-step">
-            <div class="step-number">{{ i + 1 }}</div>
-            <div class="step-content">
-              <h3 class="step-title">{{ s.title }}</h3>
-              <p class="step-desc">{{ s.desc }}</p>
-            </div>
+      <section class="content-section">
+        <div class="container">
+          <div class="content-layout">
+            <article class="article-main">
+              <div class="article-body" v-html="solution.body" />
+            </article>
+
+            <aside class="article-sidebar">
+              <div class="sidebar-block">
+                <h3 class="sidebar-title">相关方案</h3>
+                <div v-if="loadingRelated" class="sidebar-loading">
+                  <p>加载中...</p>
+                </div>
+                <div v-else-if="relatedSolutions.length === 0" class="sidebar-empty">
+                  <p>暂无相关方案</p>
+                </div>
+                <div v-else class="related-list">
+                  <div
+                    v-for="item in relatedSolutions"
+                    :key="item.contentUuid"
+                    class="related-item"
+                    @click="goSolution(item.contentUuid)"
+                  >
+                    <span class="related-category">{{ item.categoryName }}</span>
+                    <h4 class="related-title">{{ item.title }}</h4>
+                    <span class="related-date">{{ item.createdAt }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sidebar-cta">
+                <h3 class="cta-title">需要定制方案？</h3>
+                <p class="cta-desc">我们的行业专家将为您量身打造专属解决方案</p>
+                <el-button type="primary" round class="btn-full" @click="goContact">在线咨询</el-button>
+              </div>
+            </aside>
           </div>
         </div>
-      </div>
-    </section>
-
-    <section class="benefits-section">
-      <div class="container">
-        <h2 class="section-title">方案优势</h2>
-        <div class="benefits-grid">
-          <div v-for="b in data.benefits" :key="b.title" class="benefit-card">
-            <span class="benefit-icon">{{ b.icon }}</span>
-            <h3 class="benefit-name">{{ b.title }}</h3>
-            <p class="benefit-desc">{{ b.desc }}</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section v-if="data.cases.length" class="section-gray">
-      <div class="container">
-        <h2 class="section-title">典型案例</h2>
-        <div class="cases-grid">
-          <div v-for="c in data.cases" :key="c.name" class="case-card">
-            <h3 class="case-name">{{ c.name }}</h3>
-            <p class="case-desc">{{ c.desc }}</p>
-            <div class="case-result">
-              <span class="result-label">项目成果</span>
-              <span class="result-value">{{ c.result }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="cta-section">
-      <div class="container">
-        <div class="cta-inner">
-          <h2 class="cta-title">获取定制化行业方案</h2>
-          <p class="cta-desc">留下您的需求，我们的行业专家将为您量身定制专属方案</p>
-          <div class="cta-actions">
-            <el-button size="large" round class="btn-white" @click="goContact">在线咨询</el-button>
-            <el-button size="large" round class="btn-outline-white" @click="goContact">预约演示</el-button>
-          </div>
-        </div>
-      </div>
-    </section>
+      </section>
+    </template>
   </div>
 </template>
 
@@ -107,323 +135,268 @@ function goContact() {
   padding: 0 24px;
 }
 
-.hero-section {
-  padding: 120px 0 64px;
-  background: linear-gradient(to bottom, #f9fafb, #ffffff);
-  text-align: center;
-}
-
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 20px;
-  background: rgba(59, 130, 246, 0.1);
-  border-radius: 50px;
-  color: #3b82f6;
-  font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 24px;
-}
-
-.badge-icon {
-  font-size: 18px;
-}
-
-.page-title {
-  font-size: 42px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 20px;
-}
-
-.page-desc {
-  font-size: 18px;
-  color: #6b7280;
-  max-width: 800px;
-  margin: 0 auto;
-  line-height: 1.8;
-}
-
-.section-gray {
-  background: #f9fafb;
-}
-
-.challenges-section,
-.solution-section,
-.benefits-section,
-.section-gray {
-  padding: 80px 0;
-}
-
-.section-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 48px;
-  text-align: center;
-}
-
-.challenges-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-}
-
-.challenge-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 32px;
-  transition: box-shadow 0.3s;
-}
-
-.challenge-card:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-}
-
-.challenge-name {
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 12px;
-}
-
-.challenge-desc {
-  font-size: 15px;
-  color: #6b7280;
-  margin: 0;
-  line-height: 1.7;
-}
-
-.solution-steps {
+.loading-state,
+.error-state {
   display: flex;
   flex-direction: column;
-  gap: 32px;
-}
-
-.solution-step {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
-}
-
-.step-number {
-  width: 48px;
-  height: 48px;
-  background: #3b82f6;
-  color: #ffffff;
-  border-radius: 50%;
-  display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.step-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 8px;
-}
-
-.step-desc {
-  font-size: 15px;
-  color: #6b7280;
-  margin: 0;
-  line-height: 1.7;
-}
-
-.benefits-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-}
-
-.benefit-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 32px;
-  text-align: center;
-  transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.benefit-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
-}
-
-.benefit-icon {
-  font-size: 36px;
-  display: block;
-  margin-bottom: 16px;
-}
-
-.benefit-name {
-  font-size: 20px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 12px;
-}
-
-.benefit-desc {
-  font-size: 15px;
-  color: #6b7280;
-  margin: 0;
-  line-height: 1.6;
-}
-
-.cases-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
-}
-
-.case-card {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 32px;
-  transition: all 0.3s;
-}
-
-.case-card:hover {
-  background: #3b82f6;
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(59, 130, 246, 0.15);
-}
-
-.case-name {
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 12px;
-  transition: color 0.3s;
-}
-
-.case-card:hover .case-name {
-  color: #ffffff;
-}
-
-.case-desc {
-  font-size: 15px;
-  color: #6b7280;
-  margin: 0 0 20px;
-  line-height: 1.6;
-  transition: color 0.3s;
-}
-
-.case-card:hover .case-desc {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.case-result {
-  padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
-  transition: border-color 0.3s;
-}
-
-.case-card:hover .case-result {
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.result-label {
-  display: block;
-  font-size: 13px;
+  padding: 120px 24px;
   color: #9ca3af;
-  margin-bottom: 4px;
-  transition: color 0.3s;
-}
-
-.case-card:hover .result-label {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.result-value {
-  font-size: 18px;
-  font-weight: 600;
-  color: #3b82f6;
-  transition: color 0.3s;
-}
-
-.case-card:hover .result-value {
-  color: #ffffff;
-}
-
-.cta-section {
-  padding: 80px 0;
-}
-
-.cta-inner {
-  background: linear-gradient(135deg, #111827, #1e293b);
-  border-radius: 24px;
-  padding: 64px;
-  text-align: center;
-}
-
-.cta-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: #ffffff;
-  margin: 0 0 16px;
-}
-
-.cta-desc {
-  font-size: 18px;
-  color: #9ca3af;
-  margin: 0 0 32px;
-}
-
-.cta-actions {
-  display: flex;
-  justify-content: center;
+  font-size: 15px;
   gap: 16px;
 }
 
-.btn-white {
-  background: #ffffff;
+.hero-section {
+  padding: 120px 0 48px;
+  background: linear-gradient(180deg, #f0f9ff, #e0f2fe);
+  text-align: center;
+}
+
+.hero-breadcrumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+.breadcrumb-link {
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.breadcrumb-link:hover {
+  color: #3b82f6;
+}
+
+.breadcrumb-sep {
+  color: #d1d5db;
+}
+
+.breadcrumb-current {
   color: #111827;
 }
 
-.btn-white:hover {
-  background: #f0f0f0;
+.hero-badge {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 6px 18px;
+  border-radius: 50px;
+  margin-bottom: 24px;
 }
 
-.btn-outline-white {
-  border-color: rgba(255, 255, 255, 0.5);
-  color: #ffffff;
-  background: transparent;
+.page-title {
+  font-size: 38px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 20px;
+  line-height: 1.4;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.btn-outline-white:hover {
-  border-color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
+.hero-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.meta-date {
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.content-section {
+  padding: 64px 0 80px;
+  background: #f9fafb;
+}
+
+.content-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 40px;
+  align-items: start;
+}
+
+.article-main {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 48px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04);
+}
+
+.article-body {
+  max-width: 720px;
+  font-size: 16px;
+  color: #4b5563;
+  line-height: 1.9;
+}
+
+.article-body :deep(p) {
+  margin: 0 0 20px;
+}
+
+.article-body :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.article-body :deep(img) {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+.article-body :deep(h2) {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin: 32px 0 16px;
+}
+
+.article-body :deep(h3) {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 24px 0 12px;
+}
+
+.article-body :deep(ul),
+.article-body :deep(ol) {
+  margin: 0 0 20px;
+  padding-left: 24px;
+}
+
+.article-body :deep(li) {
+  margin-bottom: 8px;
+}
+
+.article-sidebar {
+  position: sticky;
+  top: 24px;
+}
+
+.sidebar-block {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04);
+  margin-bottom: 20px;
+}
+
+.sidebar-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.sidebar-loading,
+.sidebar-empty {
+  color: #9ca3af;
+  font-size: 14px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.related-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.related-item {
+  padding: 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.25s;
+  border: 1px solid transparent;
+}
+
+.related-item:hover {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+.related-category {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+  padding: 2px 10px;
+  border-radius: 50px;
+  margin-bottom: 8px;
+}
+
+.related-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 6px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.related-date {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.sidebar-cta {
+  background: linear-gradient(135deg, #111827, #1e293b);
+  border-radius: 16px;
+  padding: 28px;
+  text-align: center;
+}
+
+.sidebar-cta .cta-title {
+  font-size: 18px;
+  font-weight: 600;
   color: #ffffff;
+  margin: 0 0 8px;
+}
+
+.sidebar-cta .cta-desc {
+  font-size: 14px;
+  color: #9ca3af;
+  margin: 0 0 20px;
+  line-height: 1.6;
+}
+
+.btn-full {
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .content-layout {
+    grid-template-columns: 1fr;
+  }
+  .article-sidebar {
+    position: static;
+  }
 }
 
 @media (max-width: 768px) {
   .hero-section {
-    padding: 100px 0 40px;
+    padding: 100px 0 36px;
   }
   .page-title {
-    font-size: 32px;
-  }
-  .challenges-grid,
-  .benefits-grid,
-  .cases-grid {
-    grid-template-columns: 1fr;
-  }
-  .section-title {
     font-size: 26px;
   }
-  .cta-inner {
-    padding: 40px 24px;
-  }
-  .cta-actions {
-    flex-direction: column;
-    align-items: center;
+  .article-main {
+    padding: 28px 20px;
   }
 }
 </style>

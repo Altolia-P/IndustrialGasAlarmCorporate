@@ -4,14 +4,21 @@
 
 spring:
   datasource:
-    password: yueyang20041202
+    password: 你的数据库密码
 
   data:
     redis:
       password: 你的Redis密码（没有则留空）
 
 jwt:
-  secret: 随便填一个长字符串作为JWT签名密钥
+  secret: 填写至少 32 个字符（256 位）的随机字符串。未设置时将自动生成随机密钥（仅开发可用），生产环境必须显式设置
+
+# API Token 认证（X-API-Key）
+# 预共享密钥方式调用 API，适合外部系统集成
+# api-token-filter:
+#   shared-key: your-shared-api-key
+#   dev-mode: true                    # 开启开发模式后，可额外使用 dev-token 放行
+#   dev-token: your-dev-test-token
 
 deepseek:
   api-key: 你的DeepSeek API Key（从 https://platform.deepseek.com 获取）

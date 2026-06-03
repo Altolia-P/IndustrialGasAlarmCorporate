@@ -9,17 +9,17 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
 
-@Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
@@ -43,6 +43,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         try {
             Claims claims = jwtUtil.parseToken(token);
             String userUuid = claims.getSubject();
+            if (userUuid == null || userUuid.isBlank()) {
+                log.debug("JWT claims 缺少 subject，跳过认证");
+                filterChain.doFilter(request, response);
+                return;
+            }
             String role = claims.get("role", String.class);
 
             UsernamePasswordAuthenticationToken authentication =
@@ -54,6 +59,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             request.setAttribute("userUuid", userUuid);
             request.setAttribute("username", claims.get("username", String.class));
         } catch (JwtException e) {
+            log.debug("JWT 解析失败: {}", e.getMessage());
             SecurityContextHolder.clearContext();
         }
 

@@ -33,22 +33,18 @@ export const contentApi = {
     return request.get('/admin/contents', { params })
   },
   create(formData: FormData): Promise<ContentVO> {
-    return request.post('/admin/contents', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    return request.post('/admin/contents', formData)
   },
   update(uuid: string, formData: FormData): Promise<ContentVO> {
-    return request.put(`/admin/contents/${uuid}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    return request.put(`/admin/contents/${uuid}`, formData)
   },
   remove(uuid: string): Promise<null> {
     return request.delete(`/admin/contents/${uuid}`)
   },
   publish(uuid: string): Promise<null> {
-    return request.post(`/admin/contents/${uuid}/publish`)
+    return request.put(`/admin/contents/${uuid}/publish`)
   },
   unpublish(uuid: string): Promise<null> {
-    return request.post(`/admin/contents/${uuid}/unpublish`)
+    return request.put(`/admin/contents/${uuid}/unpublish`)
   }
 }

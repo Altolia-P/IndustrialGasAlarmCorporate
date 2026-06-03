@@ -62,6 +62,16 @@ public class Notification {
         this.status = NotificationStatus.DELIVERED;
     }
 
+    /**
+     * 重置为重试状态：清空错误信息、重置重试计数、置为 PENDING
+     */
+    public void resetForRetry() {
+        this.retryCount = 0;
+        this.errorMessage = null;
+        this.status = NotificationStatus.PENDING;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public String getNotificationUuid() { return notificationUuid; }
     public String getAlertUuid() { return alertUuid; }
     public String getRecipient() { return recipient; }

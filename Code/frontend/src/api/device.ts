@@ -57,23 +57,23 @@ export const deviceApi = {
   },
 
   markAbnormal(uuid: string): Promise<null> {
-    return request.post(`/admin/devices/${uuid}/mark-abnormal`)
+    return request.put(`/admin/devices/${uuid}/mark-abnormal`)
   },
 
   markNormal(uuid: string): Promise<null> {
-    return request.post(`/admin/devices/${uuid}/mark-normal`)
+    return request.put(`/admin/devices/${uuid}/mark-normal`)
   },
 
   markOffline(uuid: string): Promise<null> {
-    return request.post(`/admin/devices/${uuid}/mark-offline`)
+    return request.put(`/admin/devices/${uuid}/mark-offline`)
   },
 
   startMaintenance(uuid: string): Promise<null> {
-    return request.post(`/admin/devices/${uuid}/start-maintenance`)
+    return request.put(`/admin/devices/${uuid}/start-maintenance`)
   },
 
   endMaintenance(uuid: string): Promise<null> {
-    return request.post(`/admin/devices/${uuid}/end-maintenance`)
+    return request.put(`/admin/devices/${uuid}/end-maintenance`)
   },
 
   getDataPoints(uuid: string, from?: string, to?: string): Promise<DeviceDataPointVO[]> {
@@ -124,11 +124,11 @@ export const alertRuleApi = {
   },
 
   enable(uuid: string): Promise<null> {
-    return request.post(`/admin/alert-rules/${uuid}/enable`)
+    return request.put(`/admin/alert-rules/${uuid}/enable`)
   },
 
   disable(uuid: string): Promise<null> {
-    return request.post(`/admin/alert-rules/${uuid}/disable`)
+    return request.put(`/admin/alert-rules/${uuid}/disable`)
   }
 }
 
@@ -148,15 +148,15 @@ export const alertApi = {
   },
 
   confirm(uuid: string): Promise<null> {
-    return request.post(`/admin/alerts/${uuid}/confirm`)
+    return request.put(`/admin/alerts/${uuid}/confirm`)
   },
 
   resolve(uuid: string): Promise<null> {
-    return request.post(`/admin/alerts/${uuid}/resolve`)
+    return request.put(`/admin/alerts/${uuid}/resolve`)
   },
 
   close(uuid: string): Promise<null> {
-    return request.post(`/admin/alerts/${uuid}/close`)
+    return request.put(`/admin/alerts/${uuid}/close`)
   },
 
   getNotifications(alertUuid: string): Promise<NotificationVO[]> {
@@ -164,6 +164,10 @@ export const alertApi = {
   },
   listAllNotifications(params: { page?: number; size?: number }): Promise<Page<NotificationVO>> {
     return request.get('/admin/notifications', { params })
+  },
+
+  deleteNotification(uuid: string): Promise<null> {
+    return request.delete(`/admin/notifications/${uuid}`)
   },
 
   getUnreadCount(since?: string): Promise<number> {

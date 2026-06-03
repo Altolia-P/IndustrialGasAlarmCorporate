@@ -13,6 +13,10 @@ instance.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  // Let browser auto-set Content-Type with boundary for FormData uploads
+  if (config.data instanceof FormData) {
+    config.headers['Content-Type'] = undefined as unknown as string
+  }
   return config
 })
 

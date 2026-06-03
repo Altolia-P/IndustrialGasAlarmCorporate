@@ -45,4 +45,24 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         repository.save(config);
         return SystemConfigAssembler.toVO(config);
     }
+
+    @Override
+    @Transactional
+    public SystemConfigVO create(String configKey, String configValue, String description) {
+        if (repository.findByKey(configKey).isPresent()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "配置项已存在: " + configKey);
+        }
+        SystemConfig config = new SystemConfig(configKey, configValue, description);
+        repository.save(config);
+        return SystemConfigAssembler.toVO(config);
+    }
+
+    @Override
+    @Transactional
+    public void delete(String configKey) {
+        if (repository.findByKey(configKey).isEmpty()) {
+            throw new BusinessException(ErrorCode.SYSTEM_CONFIG_NOT_FOUND);
+        }
+        repository.deleteByKey(configKey);
+    }
 }

@@ -34,6 +34,11 @@ public class SystemConfigRepositoryImpl implements SystemConfigRepository {
     }
 
     @Override
+    public void deleteByKey(String configKey) {
+        mapper.deleteById(configKey);
+    }
+
+    @Override
     public void save(SystemConfig config) {
         SystemConfigPO po = toPO(config);
         if (mapper.selectById(config.getConfigKey()) != null) {
@@ -58,6 +63,7 @@ public class SystemConfigRepositoryImpl implements SystemConfigRepository {
         po.setConfigKey(config.getConfigKey());
         po.setConfigValue(config.getConfigValue());
         po.setDescription(config.getDescription());
+        po.setVersion(config.getVersion());
         return po;
     }
 }

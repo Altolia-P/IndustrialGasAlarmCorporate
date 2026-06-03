@@ -52,14 +52,14 @@ function handleLogout() {
         <el-menu-item index="/admin">
           <span>首页概览</span>
         </el-menu-item>
+        <el-menu-item index="/dashboard">
+          <span>📊 数据大屏</span>
+        </el-menu-item>
         <el-menu-item index="/admin/products">
           <span>产品管理</span>
         </el-menu-item>
         <el-menu-item index="/admin/contents">
           <span>内容管理</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/news">
-          <span>新闻管理</span>
         </el-menu-item>
         <el-menu-item index="/admin/categories">
           <span>分类管理</span>

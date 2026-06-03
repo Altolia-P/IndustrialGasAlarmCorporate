@@ -14,6 +14,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import com.niit.industrialgasalarmcorporate.infrastructure.aop.LogOperation;
+
 import java.util.List;
 
 @RestController
@@ -39,17 +41,20 @@ public class AdminWorkOrderController {
         return Result.ok(workOrderService.getWorkOrder(uuid));
     }
 
+    @LogOperation(operation = "CREATE", targetType = "WORKORDER")
     @PostMapping("/workorders")
     public Result<WorkOrderVO> createWorkOrder(@Valid @RequestBody CreateWorkOrderDTO dto) {
         return Result.ok("创建成功", workOrderService.createWorkOrder(dto));
     }
 
+    @LogOperation(operation = "UPDATE", targetType = "WORKORDER")
     @PutMapping("/workorders/{uuid}")
     public Result<WorkOrderVO> updateWorkOrder(@PathVariable String uuid,
                                                @Valid @RequestBody UpdateWorkOrderDTO dto) {
         return Result.ok("更新成功", workOrderService.updateWorkOrder(uuid, dto));
     }
 
+    @LogOperation(operation = "ASSIGN", targetType = "WORKORDER")
     @PutMapping("/workorders/{uuid}/assign")
     public Result<Void> assignWorkOrder(@PathVariable String uuid,
                                         @Valid @RequestBody AssignWorkOrderDTO dto) {
@@ -57,6 +62,7 @@ public class AdminWorkOrderController {
         return Result.ok("指派成功", null);
     }
 
+    @LogOperation(operation = "RESOLVE", targetType = "WORKORDER")
     @PutMapping("/workorders/{uuid}/complete")
     public Result<Void> completeWorkOrder(@PathVariable String uuid,
                                           @Valid @RequestBody CompleteWorkOrderDTO dto) {
@@ -64,6 +70,7 @@ public class AdminWorkOrderController {
         return Result.ok("处理完成", null);
     }
 
+    @LogOperation(operation = "DELETE", targetType = "WORKORDER")
     @DeleteMapping("/workorders/{uuid}")
     public Result<Void> deleteWorkOrder(@PathVariable String uuid) {
         workOrderService.deleteWorkOrder(uuid);

@@ -31,4 +31,44 @@ public class TestConfig {
     public CaptchaRepository captchaRepository() {
         return mock(CaptchaRepository.class);
     }
+
+    @Bean
+    public com.niit.industrialgasalarmcorporate.infrastructure.redis.AIChatRateLimitRepository aiChatRateLimitRepository() {
+        return mock(com.niit.industrialgasalarmcorporate.infrastructure.redis.AIChatRateLimitRepository.class);
+    }
+
+    @Bean
+    public com.niit.industrialgasalarmcorporate.infrastructure.redis.DeviceDataWindowRepository deviceDataWindowRepository() {
+        return mock(com.niit.industrialgasalarmcorporate.infrastructure.redis.DeviceDataWindowRepository.class);
+    }
+
+    @Bean
+    public com.niit.industrialgasalarmcorporate.infrastructure.redis.AlertSuppressRepository alertSuppressRepository() {
+        return mock(com.niit.industrialgasalarmcorporate.infrastructure.redis.AlertSuppressRepository.class);
+    }
+
+    @Bean
+    public com.niit.industrialgasalarmcorporate.infrastructure.redis.ChatSessionRepository chatSessionRepository() {
+        return mock(com.niit.industrialgasalarmcorporate.infrastructure.redis.ChatSessionRepository.class);
+    }
+
+    @Bean
+    public com.niit.industrialgasalarmcorporate.infrastructure.redis.DashboardCacheRepository dashboardCacheRepository() {
+        return mock(com.niit.industrialgasalarmcorporate.infrastructure.redis.DashboardCacheRepository.class);
+    }
+
+    @Bean
+    public com.niit.industrialgasalarmcorporate.infrastructure.redis.LoginRateLimitRepository loginRateLimitRepository() {
+        return mock(com.niit.industrialgasalarmcorporate.infrastructure.redis.LoginRateLimitRepository.class);
+    }
+
+    @Bean
+    public com.niit.industrialgasalarmcorporate.infrastructure.redis.RegisterRateLimitRepository registerRateLimitRepository() {
+        return mock(com.niit.industrialgasalarmcorporate.infrastructure.redis.RegisterRateLimitRepository.class);
+    }
+
+    @Bean
+    public com.niit.industrialgasalarmcorporate.infrastructure.redis.DeviceDataRateLimitRepository deviceDataRateLimitRepository() {
+        return mock(com.niit.industrialgasalarmcorporate.infrastructure.redis.DeviceDataRateLimitRepository.class);
+    }
 }

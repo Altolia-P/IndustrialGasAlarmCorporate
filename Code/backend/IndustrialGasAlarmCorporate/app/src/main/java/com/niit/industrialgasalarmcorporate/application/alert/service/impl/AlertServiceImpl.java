@@ -12,7 +12,9 @@ import com.niit.industrialgasalarmcorporate.domain.auth.User;
 import com.niit.industrialgasalarmcorporate.domain.auth.UserRepository;
 import com.niit.industrialgasalarmcorporate.domain.device.Device;
 import com.niit.industrialgasalarmcorporate.domain.device.DeviceRepository;
+import com.niit.industrialgasalarmcorporate.infrastructure.redis.DashboardCacheRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AlertServiceImpl implements AlertService {
@@ -29,6 +32,7 @@ public class AlertServiceImpl implements AlertService {
     private final AlertRepository alertRepository;
     private final DeviceRepository deviceRepository;
     private final UserRepository userRepository;
+    private final DashboardCacheRepository dashboardCacheRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -60,6 +64,7 @@ public class AlertServiceImpl implements AlertService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ALERT_NOT_FOUND));
         alert.confirm(confirmedBy);
         alertRepository.save(alert);
+        evictDashboardCache();
     }
 
     @Override
@@ -69,6 +74,7 @@ public class AlertServiceImpl implements AlertService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ALERT_NOT_FOUND));
         alert.resolve(resolvedBy);
         alertRepository.save(alert);
+        evictDashboardCache();
     }
 
     @Override
@@ -78,6 +84,15 @@ public class AlertServiceImpl implements AlertService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ALERT_NOT_FOUND));
         alert.close();
         alertRepository.save(alert);
+        evictDashboardCache();
+    }
+
+    private void evictDashboardCache() {
+        try {
+            dashboardCacheRepository.evict("dashboard:stats");
+        } catch (Exception e) {
+            log.debug("Dashboard缓存失效失败: {}", e.getMessage());
+        }
     }
 
     private void enrichBatch(List<AlertVO> vos) {

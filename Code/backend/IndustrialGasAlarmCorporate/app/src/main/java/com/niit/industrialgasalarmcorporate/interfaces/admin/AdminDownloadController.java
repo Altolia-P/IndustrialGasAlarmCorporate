@@ -6,6 +6,9 @@ import com.niit.industrialgasalarmcorporate.common.base.Page;
 import com.niit.industrialgasalarmcorporate.common.base.Result;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import com.niit.industrialgasalarmcorporate.infrastructure.aop.LogOperation;
+
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
@@ -22,6 +25,7 @@ public class AdminDownloadController {
         return Result.ok(downloadFileService.listFiles(page, size));
     }
 
+    @LogOperation(operation = "CREATE", targetType = "DOWNLOAD")
     @PostMapping("/downloads")
     public Result<DownloadFileVO> upload(
             @RequestParam("file") MultipartFile file,
@@ -29,6 +33,7 @@ public class AdminDownloadController {
         return Result.ok(downloadFileService.uploadFile(file, displayName));
     }
 
+    @LogOperation(operation = "DELETE", targetType = "DOWNLOAD")
     @DeleteMapping("/downloads/{uuid}")
     public Result<Void> delete(@PathVariable String uuid) {
         downloadFileService.deleteFile(uuid);

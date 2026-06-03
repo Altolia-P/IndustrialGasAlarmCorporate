@@ -21,6 +21,7 @@ public final class OperationLogAssembler {
         vo.setTargetId(log.getTargetId());
         vo.setTargetName(log.getTargetName());
         vo.setDetail(log.getDetail());
+        vo.setBusinessPurpose(log.getBusinessPurpose());
         vo.setIp(log.getIp());
         vo.setCreatedAt(log.getCreatedAt().format(DTF));
         return vo;

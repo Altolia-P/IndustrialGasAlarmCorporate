@@ -11,18 +11,22 @@ import com.niit.industrialgasalarmcorporate.common.exception.BusinessException;
 import com.niit.industrialgasalarmcorporate.domain.auth.UserRepository;
 import com.niit.industrialgasalarmcorporate.domain.device.Device;
 import com.niit.industrialgasalarmcorporate.domain.device.DeviceRepository;
+import com.niit.industrialgasalarmcorporate.infrastructure.redis.DashboardCacheRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DeviceServiceImpl implements DeviceService {
 
     private final DeviceRepository deviceRepository;
     private final UserRepository userRepository;
+    private final DashboardCacheRepository dashboardCacheRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -56,6 +60,7 @@ public class DeviceServiceImpl implements DeviceService {
         }
         Device device = DeviceAssembler.toEntity(dto);
         deviceRepository.save(device);
+        evictDashboardCache();
         return enrich(DeviceAssembler.toVO(device));
     }
 
@@ -66,6 +71,7 @@ public class DeviceServiceImpl implements DeviceService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
         DeviceAssembler.updateEntity(device, dto);
         deviceRepository.save(device);
+        evictDashboardCache();
         return enrich(DeviceAssembler.toVO(device));
     }
 
@@ -76,6 +82,8 @@ public class DeviceServiceImpl implements DeviceService {
             throw new BusinessException(ErrorCode.DEVICE_NOT_FOUND);
         }
         deviceRepository.deleteById(deviceUuid);
+        evictDashboardCache();
+        log.info("设备已删除: uuid={}，关联告警/数据点需异步清理或由 DBA 定期归档", deviceUuid);
     }
 
     @Override
@@ -85,6 +93,7 @@ public class DeviceServiceImpl implements DeviceService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
         device.markAbnormal();
         deviceRepository.save(device);
+        evictDashboardCache();
     }
 
     @Override
@@ -94,6 +103,7 @@ public class DeviceServiceImpl implements DeviceService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
         device.markNormal();
         deviceRepository.save(device);
+        evictDashboardCache();
     }
 
     @Override
@@ -103,6 +113,7 @@ public class DeviceServiceImpl implements DeviceService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
         device.markOffline();
         deviceRepository.save(device);
+        evictDashboardCache();
     }
 
     @Override
@@ -112,6 +123,7 @@ public class DeviceServiceImpl implements DeviceService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
         device.startMaintenance();
         deviceRepository.save(device);
+        evictDashboardCache();
     }
 
     @Override
@@ -121,6 +133,15 @@ public class DeviceServiceImpl implements DeviceService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEVICE_NOT_FOUND));
         device.endMaintenance();
         deviceRepository.save(device);
+        evictDashboardCache();
+    }
+
+    private void evictDashboardCache() {
+        try {
+            dashboardCacheRepository.evict("dashboard:stats");
+        } catch (Exception e) {
+            log.debug("Dashboard缓存失效失败: {}", e.getMessage());
+        }
     }
 
     private DeviceVO enrich(DeviceVO vo) {

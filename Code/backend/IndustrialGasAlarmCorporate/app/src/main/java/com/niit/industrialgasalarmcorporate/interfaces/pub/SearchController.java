@@ -9,6 +9,7 @@ import com.niit.industrialgasalarmcorporate.domain.content.Content;
 import com.niit.industrialgasalarmcorporate.domain.content.ContentRepository;
 import com.niit.industrialgasalarmcorporate.domain.product.Product;
 import com.niit.industrialgasalarmcorporate.domain.product.ProductRepository;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,7 +27,7 @@ public class SearchController {
     private final ContentRepository contentRepository;
 
     @GetMapping("/search")
-    public Result<List<Map<String, Object>>> search(@RequestParam String keyword,
+    public Result<List<Map<String, Object>>> search(@RequestParam @Size(max = 200, message = "搜索关键词不超过200字符") String keyword,
                                                      @RequestParam(defaultValue = "10") int limit) {
         List<Map<String, Object>> results = new ArrayList<>();
 

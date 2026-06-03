@@ -36,6 +36,7 @@ public class ContentRepositoryImpl implements ContentRepository {
         ContentPO po = toPO(content);
         ContentPO existing = contentMapper.selectById(content.getContentUuid());
         if (existing != null) {
+            po.setVersion(existing.getVersion());
             contentMapper.updateById(po);
         } else {
             contentMapper.insert(po);
@@ -68,7 +69,7 @@ public class ContentRepositoryImpl implements ContentRepository {
                 .eq(ContentPO::getType, ContentType.SOLUTION.name())
                 .eq(ContentPO::getStatus, ContentStatus.PUBLISHED.name())
                 .orderByDesc(ContentPO::getCreatedAt)
-                .last("LIMIT " + limit);
+                .last("LIMIT " + Math.min(Math.max(limit, 1), 1000));
         List<ContentPO> poList = contentMapper.selectList(wrapper);
         return enrichContents(poList);
     }
@@ -96,6 +97,13 @@ public class ContentRepositoryImpl implements ContentRepository {
                 contentMapper.selectPage(mpPage, wrapper);
         List<Content> contents = enrichContents(result.getRecords());
         return new Page<>(contents, result.getTotal(), (int) result.getSize(), (int) result.getCurrent());
+    }
+
+    @Override
+    public long countByCategoryUuid(String categoryUuid) {
+        LambdaQueryWrapper<ContentPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ContentPO::getCategoryUuid, categoryUuid);
+        return contentMapper.selectCount(wrapper);
     }
 
     private List<Content> enrichContents(List<ContentPO> records) {
@@ -132,6 +140,7 @@ public class ContentRepositoryImpl implements ContentRepository {
                 ContentStatus.valueOf(po.getStatus()),
                 po.getCategoryUuid(),
                 name,
+                po.getVersion(),
                 po.getCreatedAt(),
                 po.getUpdatedAt()
         );
@@ -147,6 +156,7 @@ public class ContentRepositoryImpl implements ContentRepository {
         po.setType(content.getType().name());
         po.setStatus(content.getStatus().name());
         po.setCategoryUuid(content.getCategoryUuid());
+        po.setVersion(content.getVersion());
         return po;
     }
 }

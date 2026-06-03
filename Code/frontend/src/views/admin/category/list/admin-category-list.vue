@@ -69,10 +69,11 @@ async function handleSubmit() {
     return
   }
   try {
+    const parentUuid = form.value.parentUuid || ''
     if (editingUuid.value) {
       await categoryApi.update(editingUuid.value, {
         name: form.value.name,
-        parentUuid: form.value.parentUuid || undefined,
+        parentUuid,
         sortOrder: form.value.sortOrder
       })
       ElMessage.success('修改成功')
@@ -80,7 +81,7 @@ async function handleSubmit() {
       await categoryApi.create({
         name: form.value.name,
         type: tabType.value,
-        parentUuid: form.value.parentUuid || undefined,
+        parentUuid,
         sortOrder: form.value.sortOrder
       })
       ElMessage.success('新增成功')

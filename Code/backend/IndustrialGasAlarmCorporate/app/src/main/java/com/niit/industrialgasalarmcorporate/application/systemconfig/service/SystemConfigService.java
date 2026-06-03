@@ -11,4 +11,8 @@ public interface SystemConfigService {
     List<SystemConfigVO> listAll();
 
     SystemConfigVO update(String configKey, String configValue, String description);
+
+    SystemConfigVO create(String configKey, String configValue, String description);
+
+    void delete(String configKey);
 }

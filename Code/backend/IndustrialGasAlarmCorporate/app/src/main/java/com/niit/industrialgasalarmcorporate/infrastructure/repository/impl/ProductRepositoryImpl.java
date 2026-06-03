@@ -45,6 +45,7 @@ public class ProductRepositoryImpl implements ProductRepository {
         ProductPO po = toPO(product);
         ProductPO existing = productMapper.selectById(product.getProductUuid());
         if (existing != null) {
+            po.setVersion(existing.getVersion());
             productMapper.updateById(po);
         } else {
             productMapper.insert(po);
@@ -91,7 +92,7 @@ public class ProductRepositoryImpl implements ProductRepository {
         wrapper.and(w -> w.like(ProductPO::getName, keyword).or().like(ProductPO::getDescription, keyword))
                 .eq(ProductPO::getStatus, ProductStatus.PUBLISHED.name())
                 .orderByDesc(ProductPO::getCreatedAt)
-                .last("LIMIT " + limit);
+                .last("LIMIT " + Math.min(Math.max(limit, 1), 1000));
         List<ProductPO> poList = productMapper.selectList(wrapper);
         return enrichProducts(poList);
     }
@@ -131,6 +132,13 @@ public class ProductRepositoryImpl implements ProductRepository {
                         attrsMap.getOrDefault(po.getProductUuid(), Collections.emptyList()),
                         categoryNames.get(po.getCategoryUuid())))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public long countByCategoryUuid(String categoryUuid) {
+        LambdaQueryWrapper<ProductPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ProductPO::getCategoryUuid, categoryUuid);
+        return productMapper.selectCount(wrapper);
     }
 
     private Map<String, List<ProductImage>> batchLoadImages(List<String> productUuids) {
@@ -228,6 +236,7 @@ public class ProductRepositoryImpl implements ProductRepository {
 
     private ProductImagePO toImagePO(String productUuid, ProductImage image) {
         ProductImagePO po = new ProductImagePO();
+        po.setImageId(UUID.randomUUID().toString());
         po.setProductUuid(productUuid);
         po.setUrl(image.getUrl());
         po.setAltText(image.getAltText());
@@ -241,6 +250,7 @@ public class ProductRepositoryImpl implements ProductRepository {
 
     private ProductAttributePO toAttributePO(String productUuid, ProductAttribute attribute) {
         ProductAttributePO po = new ProductAttributePO();
+        po.setAttrId(UUID.randomUUID().toString());
         po.setProductUuid(productUuid);
         po.setAttrKey(attribute.getAttrKey());
         po.setAttrVal(attribute.getAttrVal());

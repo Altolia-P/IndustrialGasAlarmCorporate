@@ -7,11 +7,17 @@ import com.niit.industrialgasalarmcorporate.application.content.vo.ContentDetail
 import com.niit.industrialgasalarmcorporate.application.content.vo.ContentVO;
 import com.niit.industrialgasalarmcorporate.common.base.Page;
 import com.niit.industrialgasalarmcorporate.common.base.Result;
+import com.niit.industrialgasalarmcorporate.common.enums.ErrorCode;
+import com.niit.industrialgasalarmcorporate.common.exception.BusinessException;
+import com.niit.industrialgasalarmcorporate.infrastructure.aop.LogOperation;
 import com.niit.industrialgasalarmcorporate.infrastructure.storage.FileStorageService;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -20,7 +26,9 @@ public class AdminContentController {
 
     private final ContentService contentService;
     private final FileStorageService fileStorageService;
+    private final Validator validator;
 
+    @LogOperation(operation = "CREATE", targetType = "CONTENT")
     @PostMapping(value = "/contents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<ContentVO> createContent(
             @RequestParam String title,
@@ -39,6 +47,13 @@ public class AdminContentController {
         dto.setStatus(status);
         if (coverImage != null && !coverImage.isEmpty()) {
             dto.setCoverImage(fileStorageService.store(coverImage));
+        }
+        var violations = validator.validate(dto);
+        if (!violations.isEmpty()) {
+            String msg = violations.stream()
+                    .map(v -> v.getPropertyPath() + ": " + v.getMessage())
+                    .collect(Collectors.joining(", "));
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, msg);
         }
         return Result.ok("新增成功", contentService.createContent(dto));
     }
@@ -59,6 +74,7 @@ public class AdminContentController {
         return Result.ok(contentService.findAdminContents(title, type, categoryUuid, status, page, size));
     }
 
+    @LogOperation(operation = "UPDATE", targetType = "CONTENT")
     @PutMapping(value = "/contents/{uuid}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<ContentVO> updateContent(
             @PathVariable String uuid,
@@ -77,22 +93,32 @@ public class AdminContentController {
         if (coverImage != null && !coverImage.isEmpty()) {
             dto.setCoverImage(fileStorageService.store(coverImage));
         }
+        var violations = validator.validate(dto);
+        if (!violations.isEmpty()) {
+            String msg = violations.stream()
+                    .map(v -> v.getPropertyPath() + ": " + v.getMessage())
+                    .collect(Collectors.joining(", "));
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, msg);
+        }
         return Result.ok("修改成功", contentService.updateContent(uuid, dto));
     }
 
+    @LogOperation(operation = "DELETE", targetType = "CONTENT")
     @DeleteMapping("/contents/{uuid}")
     public Result<Void> deleteContent(@PathVariable String uuid) {
         contentService.deleteContent(uuid);
         return Result.ok("删除成功", null);
     }
 
-    @PostMapping("/contents/{uuid}/publish")
+    @LogOperation(operation = "PUBLISH", targetType = "CONTENT")
+    @PutMapping("/contents/{uuid}/publish")
     public Result<Void> publishContent(@PathVariable String uuid) {
         contentService.publishContent(uuid);
         return Result.ok("发布成功", null);
     }
 
-    @PostMapping("/contents/{uuid}/unpublish")
+    @LogOperation(operation = "UNPUBLISH", targetType = "CONTENT")
+    @PutMapping("/contents/{uuid}/unpublish")
     public Result<Void> unpublishContent(@PathVariable String uuid) {
         contentService.unpublishContent(uuid);
         return Result.ok("取消发布成功", null);

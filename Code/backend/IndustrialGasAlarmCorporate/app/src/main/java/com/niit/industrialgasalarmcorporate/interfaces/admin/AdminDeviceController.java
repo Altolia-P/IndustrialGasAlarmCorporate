@@ -12,6 +12,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import com.niit.industrialgasalarmcorporate.infrastructure.aop.LogOperation;
+
 import java.util.List;
 
 @RestController
@@ -38,47 +40,50 @@ public class AdminDeviceController {
         return Result.ok(deviceService.getDevice(uuid));
     }
 
+    @LogOperation(operation = "CREATE", targetType = "DEVICE")
     @PostMapping("/devices")
     public Result<DeviceVO> createDevice(@Valid @RequestBody CreateDeviceDTO dto) {
         return Result.ok("创建成功", deviceService.createDevice(dto));
     }
 
+    @LogOperation(operation = "UPDATE", targetType = "DEVICE")
     @PutMapping("/devices/{uuid}")
     public Result<DeviceVO> updateDevice(@PathVariable String uuid, @Valid @RequestBody UpdateDeviceDTO dto) {
         return Result.ok("更新成功", deviceService.updateDevice(uuid, dto));
     }
 
+    @LogOperation(operation = "DELETE", targetType = "DEVICE")
     @DeleteMapping("/devices/{uuid}")
     public Result<Void> deleteDevice(@PathVariable String uuid) {
         deviceService.deleteDevice(uuid);
         return Result.ok("删除成功", null);
     }
 
-    @PostMapping("/devices/{uuid}/mark-abnormal")
+    @PutMapping("/devices/{uuid}/mark-abnormal")
     public Result<Void> markAbnormal(@PathVariable String uuid) {
         deviceService.markAbnormal(uuid);
         return Result.ok("已标记为异常", null);
     }
 
-    @PostMapping("/devices/{uuid}/mark-normal")
+    @PutMapping("/devices/{uuid}/mark-normal")
     public Result<Void> markNormal(@PathVariable String uuid) {
         deviceService.markNormal(uuid);
         return Result.ok("已恢复为正常", null);
     }
 
-    @PostMapping("/devices/{uuid}/mark-offline")
+    @PutMapping("/devices/{uuid}/mark-offline")
     public Result<Void> markOffline(@PathVariable String uuid) {
         deviceService.markOffline(uuid);
         return Result.ok("已标记为离线", null);
     }
 
-    @PostMapping("/devices/{uuid}/start-maintenance")
+    @PutMapping("/devices/{uuid}/start-maintenance")
     public Result<Void> startMaintenance(@PathVariable String uuid) {
         deviceService.startMaintenance(uuid);
         return Result.ok("已进入维护模式", null);
     }
 
-    @PostMapping("/devices/{uuid}/end-maintenance")
+    @PutMapping("/devices/{uuid}/end-maintenance")
     public Result<Void> endMaintenance(@PathVariable String uuid) {
         deviceService.endMaintenance(uuid);
         return Result.ok("已结束维护", null);

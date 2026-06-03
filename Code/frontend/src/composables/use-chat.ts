@@ -15,6 +15,7 @@ function generateId(): string {
 
 export function useChat() {
   let store: ReturnType<typeof useAiChatStore>
+  let activeInterval: ReturnType<typeof setInterval> | null = null
 
   function getStore() {
     if (!store) {
@@ -79,16 +80,26 @@ export function useChat() {
     const fullText = msg.content
     let index = 0
 
-    const interval = setInterval(() => {
+    if (activeInterval) clearInterval(activeInterval)
+
+    activeInterval = setInterval(() => {
       index++
       msg.typedContent = fullText.slice(0, index)
 
       if (index >= fullText.length) {
-        clearInterval(interval)
+        clearInterval(activeInterval!)
+        activeInterval = null
         msg.isTyping = false
         s.setSending(false)
       }
     }, TYPING_SPEED_MIN + Math.floor(Math.random() * (TYPING_SPEED_MAX - TYPING_SPEED_MIN)))
+  }
+
+  function dispose() {
+    if (activeInterval) {
+      clearInterval(activeInterval)
+      activeInterval = null
+    }
   }
 
   async function clearChat() {
@@ -113,6 +124,7 @@ export function useChat() {
     sendMessage,
     clearChat,
     toggleChat,
+    dispose,
     store: computed(() => getStore())
   }
 }

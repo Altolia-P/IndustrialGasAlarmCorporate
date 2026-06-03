@@ -83,7 +83,7 @@ function handleLogout() {
           <h2>{{ sidebarCollapsed ? authStore.username : ($route.meta.title || '员工工作台') }}</h2>
         </div>
         <div class="header-right">
-          <NotificationBell :api="staffNotifyApi" view-all-route="/staff/notifications" />
+          <NotificationBell :api="staffNotifyApi" />
         </div>
       </header>
       <main class="dashboard-main">

@@ -27,36 +27,42 @@ function goDetail() {
       </div>
       <div class="solutions-layout">
         <div class="solutions-tabs">
-          <button
-            v-for="tab in solutionTabs"
-            :key="tab.id"
-            :class="['solution-tab', { active: activeTab === tab.id }]"
-            @click="switchTab(tab.id)"
-          >
-            <span class="tab-icon">{{ tab.icon }}</span>
-            <span class="tab-name">{{ tab.name }}</span>
-          </button>
+          <div class="solutions-tabs-scroll">
+            <button
+              v-for="tab in solutionTabs"
+              :key="tab.id"
+              :class="['solution-tab', { active: activeTab === tab.id }]"
+              @click="switchTab(tab.id)"
+            >
+              <span class="tab-icon">{{ tab.icon }}</span>
+              <span class="tab-name">{{ tab.name }}</span>
+            </button>
+          </div>
         </div>
         <div class="solutions-content">
-          <h3 class="solution-title">{{ currentSolution.title }}</h3>
-          <p class="solution-desc">{{ currentSolution.description }}</p>
-          <div class="solution-features">
-            <div v-for="(f, i) in currentSolution.features" :key="i" class="solution-feature-item">
-              <span class="feature-dot"></span>
-              {{ f }}
+          <Transition name="fade-slide" mode="out-in">
+            <div :key="activeTab" class="solution-panel">
+              <h3 class="solution-title">{{ currentSolution.title }}</h3>
+              <p class="solution-desc">{{ currentSolution.description }}</p>
+              <div class="solution-features">
+                <div v-for="(f, i) in currentSolution.features" :key="i" class="solution-feature-item">
+                  <span class="feature-dot"></span>
+                  {{ f }}
+                </div>
+              </div>
+              <div class="solution-stats">
+                <div class="solution-stat">
+                  <span class="stat-num">{{ currentSolution.projects }}</span>
+                  <span class="stat-text">成功项目</span>
+                </div>
+                <div class="solution-stat">
+                  <span class="stat-num">{{ currentSolution.clients }}</span>
+                  <span class="stat-text">服务客户</span>
+                </div>
+                <el-button type="primary" size="large" round @click="goDetail">了解详情</el-button>
+              </div>
             </div>
-          </div>
-          <div class="solution-stats">
-            <div class="solution-stat">
-              <span class="stat-num">{{ currentSolution.projects }}</span>
-              <span class="stat-text">成功项目</span>
-            </div>
-            <div class="solution-stat">
-              <span class="stat-num">{{ currentSolution.clients }}</span>
-              <span class="stat-text">服务客户</span>
-            </div>
-            <el-button type="primary" size="large" round @click="goDetail">了解详情</el-button>
-          </div>
+          </Transition>
         </div>
       </div>
     </div>
@@ -113,13 +119,31 @@ function goDetail() {
   display: grid;
   grid-template-columns: 320px 1fr;
   gap: 32px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .solutions-tabs {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+}
+
+.solutions-tabs-scroll {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
+  max-height: 100%;
+  padding-right: 4px;
+}
+
+.solutions-tabs-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.solutions-tabs-scroll::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
 }
 
 .solution-tab {
@@ -243,7 +267,14 @@ function goDetail() {
   }
   .solutions-tabs {
     flex-direction: row;
+  }
+  .solutions-tabs-scroll {
+    flex-direction: row;
     overflow-x: auto;
+    overflow-y: hidden;
+    max-height: none;
+    padding-right: 0;
+    padding-bottom: 4px;
   }
   .solution-tab {
     white-space: nowrap;
@@ -258,5 +289,31 @@ function goDetail() {
   .section-title {
     font-size: 28px;
   }
+  .solutions-content {
+    padding: 24px;
+  }
+  .solution-features {
+    grid-template-columns: 1fr;
+  }
+  .solution-stats {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+}
+
+/* Transition */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-12px);
 }
 </style>

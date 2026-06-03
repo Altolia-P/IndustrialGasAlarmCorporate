@@ -12,7 +12,7 @@ import java.util.List;
 @ConfigurationProperties(prefix = "simulator")
 public class SimulatorProperties {
 
-    private String targetUrl = "http://localhost:8080/api/v1/public/device-data";
+    private String targetUrl = "http://localhost:8081/api/v1/collect/device-data";
     private long intervalMs = 5000;
     private boolean enabled = true;
 

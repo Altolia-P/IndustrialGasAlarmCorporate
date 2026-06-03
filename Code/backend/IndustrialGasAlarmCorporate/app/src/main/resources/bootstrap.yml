@@ -1,0 +1,23 @@
+# Nacos 服务注册发现 + 配置中心
+# bootstrap.yml 由 spring-cloud-starter-bootstrap 加载，优先级高于 application.yml
+
+spring:
+  application:
+    name: industrial-gas-alarm-corporate
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+      config:
+        server-addr: ${NACOS_SERVER:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+        file-extension: yml
+        # 等 Nacos 上有配置后再启用 shared-configs
+        # shared-configs:
+        #   - data-id: shared-datasource.yml
+        #     refresh: true

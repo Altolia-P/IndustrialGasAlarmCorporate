@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useNotificationBell } from '@/composables/use-notification-bell'
+import { useNotificationBell, type NotificationBellApi } from '@/composables/use-notification-bell'
+import type { NotificationVO } from '@/types/device'
 
 const props = withDefaults(defineProps<{
-  api: { getUnreadCount: (since?: string) => Promise<number>; getRecentNotifications: () => Promise<any[]> }
+  api: NotificationBellApi
   viewAllRoute?: string
 }>(), {
   viewAllRoute: '/admin/notifications'

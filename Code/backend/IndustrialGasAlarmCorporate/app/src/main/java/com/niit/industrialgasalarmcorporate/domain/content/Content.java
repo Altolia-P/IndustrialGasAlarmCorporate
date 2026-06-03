@@ -17,6 +17,7 @@ public class Content {
     private ContentStatus status;
     private String categoryUuid;
     private String categoryName;
+    private Integer version;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -34,7 +35,7 @@ public class Content {
 
     public Content(String contentUuid, String title, String summary, String body,
                    String coverImage, ContentType type, ContentStatus status, String categoryUuid,
-                   String categoryName, LocalDateTime createdAt, LocalDateTime updatedAt) {
+                   String categoryName, Integer version, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.contentUuid = contentUuid;
         this.title = title;
         this.summary = summary;
@@ -44,6 +45,7 @@ public class Content {
         this.status = status;
         this.categoryUuid = categoryUuid;
         this.categoryName = categoryName;
+        this.version = version;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -105,6 +107,10 @@ public class Content {
 
     public String getCategoryName() {
         return categoryName;
+    }
+
+    public Integer getVersion() {
+        return version;
     }
 
     public LocalDateTime getCreatedAt() {

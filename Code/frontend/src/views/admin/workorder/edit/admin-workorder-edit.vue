@@ -135,6 +135,9 @@ async function handleSubmit() {
     if (isCreate.value) {
       await workOrderApi.create(data)
       ElMessage.success('创建成功')
+    } else {
+      await workOrderApi.update(route.params.uuid as string, data)
+      ElMessage.success('保存成功')
     }
     router.push('/admin/workorders')
   } catch (e: unknown) {
@@ -171,19 +174,19 @@ function handleCancel() {
       <h3 class="edit-title">{{ pageTitle }}</h3>
       <el-form :model="form" label-width="100px" class="edit-form">
         <el-form-item label="工单标题" required>
-          <el-input v-model="form.title" placeholder="请输入工单标题" maxlength="100" show-word-limit :disabled="isEdit" />
+          <el-input v-model="form.title" placeholder="请输入工单标题" maxlength="100" show-word-limit :disabled="isEdit && form.status !== WorkOrderStatus.PENDING" />
         </el-form-item>
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="工单类型" required>
-              <el-select v-model="form.type" placeholder="请选择工单类型" style="width: 100%" :disabled="isEdit">
+              <el-select v-model="form.type" placeholder="请选择工单类型" style="width: 100%" :disabled="isEdit && form.status !== WorkOrderStatus.PENDING">
                 <el-option v-for="(label, key) in WorkOrderTypeMap" :key="key" :label="label" :value="key" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="优先级" required>
-              <el-radio-group v-model="form.priority" :disabled="isEdit">
+              <el-radio-group v-model="form.priority" :disabled="isEdit && form.status !== WorkOrderStatus.PENDING">
                 <el-radio-button v-for="(label, key) in WorkOrderPriorityMap" :key="key" :value="key">{{ label }}</el-radio-button>
               </el-radio-group>
             </el-form-item>
@@ -192,17 +195,17 @@ function handleCancel() {
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="客户名称" required>
-              <el-input v-model="form.customerName" placeholder="请输入客户名称" maxlength="50" :disabled="isEdit" />
+              <el-input v-model="form.customerName" placeholder="请输入客户名称" maxlength="50" :disabled="isEdit && form.status !== WorkOrderStatus.PENDING" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="联系电话">
-              <el-input v-model="form.customerPhone" placeholder="请输入联系电话" maxlength="20" :disabled="isEdit" />
+              <el-input v-model="form.customerPhone" placeholder="请输入联系电话" maxlength="20" :disabled="isEdit && form.status !== WorkOrderStatus.PENDING" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-form-item label="问题描述" required>
-          <el-input v-model="form.description" type="textarea" :rows="5" placeholder="请详细描述问题..." maxlength="500" show-word-limit :disabled="isEdit" />
+          <el-input v-model="form.description" type="textarea" :rows="5" placeholder="请详细描述问题..." maxlength="500" show-word-limit :disabled="isEdit && form.status !== WorkOrderStatus.PENDING" />
         </el-form-item>
         <el-form-item label="指派人员">
           <div v-if="isCreate" style="display:flex; flex-direction:column; gap:8px; width:100%">
@@ -229,7 +232,8 @@ function handleCancel() {
             <el-button size="large" @click="handleCancel">取消</el-button>
           </template>
           <template v-else>
-            <el-button v-if="form.status !== 'COMPLETED'" type="success" size="large" @click="handleComplete">标记完成</el-button>
+            <el-button v-if="form.status === WorkOrderStatus.PENDING" type="primary" size="large" :loading="submitting" @click="handleSubmit">保存修改</el-button>
+            <el-button v-if="form.status !== WorkOrderStatus.COMPLETED" type="success" size="large" @click="handleComplete">标记完成</el-button>
             <el-button size="large" @click="handleCancel">返回</el-button>
           </template>
         </el-form-item>

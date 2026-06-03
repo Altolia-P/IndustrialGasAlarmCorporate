@@ -14,6 +14,8 @@ public interface NotificationService {
 
     void resend(String notificationUuid);
 
+    void delete(String notificationUuid);
+
     long getUnreadCount(java.time.LocalDateTime since);
 
     java.util.List<NotificationVO> getRecent(int limit);

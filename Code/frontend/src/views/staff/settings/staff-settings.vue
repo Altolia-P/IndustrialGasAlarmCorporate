@@ -7,9 +7,13 @@ import { authApi } from '@/api/auth'
 const authStore = useAuthStore()
 const submitting = ref(false)
 
-const form = reactive({ newPassword: '', confirmPassword: '' })
+const form = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
 
 async function handleChangePassword() {
+  if (!form.oldPassword) {
+    ElMessage.warning('请输入旧密码')
+    return
+  }
   if (!form.newPassword) {
     ElMessage.warning('请输入新密码')
     return
@@ -18,13 +22,18 @@ async function handleChangePassword() {
     ElMessage.warning('两次新密码输入不一致')
     return
   }
-  if (form.newPassword.length < 6) {
-    ElMessage.warning('新密码长度不能少于6位')
+  if (form.newPassword.length < 8) {
+    ElMessage.warning('新密码长度不能少于8位')
+    return
+  }
+  if (!/[0-9]/.test(form.newPassword) || !/[a-zA-Z]/.test(form.newPassword)) {
+    ElMessage.warning('新密码需同时包含字母和数字')
     return
   }
   submitting.value = true
   try {
-    await authApi.resetPassword({ username: authStore.username, newPassword: form.newPassword })
+    await authApi.resetPassword({ oldPassword: form.oldPassword, newPassword: form.newPassword })
+    form.oldPassword = ''
     form.newPassword = ''
     form.confirmPassword = ''
     ElMessage.success('密码修改成功')
@@ -42,8 +51,11 @@ async function handleChangePassword() {
     <div class="settings-card">
       <h3>账户设置</h3>
       <el-form :model="form" label-width="100px">
+        <el-form-item label="旧密码">
+          <el-input v-model="form.oldPassword" type="password" placeholder="请输入当前密码" show-password />
+        </el-form-item>
         <el-form-item label="新密码">
-          <el-input v-model="form.newPassword" type="password" placeholder="请输入新密码（至少6位）" show-password />
+          <el-input v-model="form.newPassword" type="password" placeholder="含字母和数字，至少8位" show-password />
         </el-form-item>
         <el-form-item label="确认密码">
           <el-input v-model="form.confirmPassword" type="password" placeholder="请再次输入新密码" show-password />

@@ -76,8 +76,12 @@ public class StaffServiceImpl implements StaffService {
     @Override
     @Transactional
     public void deleteStaff(String staffUuid) {
-        if (staffRepository.findById(staffUuid).isEmpty()) {
-            throw new BusinessException(ErrorCode.STAFF_NOT_FOUND);
+        Staff staff = staffRepository.findById(staffUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.STAFF_NOT_FOUND));
+        if (staff.getUserUuid() != null) {
+            userRepository.findById(staff.getUserUuid()).ifPresent(u -> {
+                userRepository.delete(u.getUserUuid());
+            });
         }
         staffRepository.deleteById(staffUuid);
     }

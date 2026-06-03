@@ -55,7 +55,7 @@ function filterName(val: string) {
   return val.replace(/[^\u4e00-\u9fa5a-zA-Z]/g, '')
 }
 function filterChinese(val: string) {
-  return val.replace(/[^\u4e00-\u9fa5]/g, '')
+  return val.replace(/[^\u4e00-\u9fa5a-zA-Z0-9\s\-\(\)\uff08\uff09.&]/g, '')
 }
 function filterPhone(val: string) {
   return val.replace(/[^\d\-+\s()]/g, '')
@@ -74,7 +74,7 @@ function onPhoneInput(val: string) {
 function validate(): string | null {
   if (!form.name || !form.name.trim()) return '请输入姓名'
   if (!RE_NAME.test(form.name)) return '姓名仅支持字母和汉字'
-  if (form.company && !RE_CHINESE.test(form.company)) return '公司名称仅支持汉字'
+  if (form.company && !/^[一-龥a-zA-Z0-9\s\-\(\)（）.&]+$/.test(form.company)) return '公司名称包含无效字符'
   if (!form.phone || !form.phone.trim()) return '请输入联系电话'
   if (!RE_PHONE.test(form.phone)) return '请输入正确的手机号码'
   if (form.email && !RE_EMAIL.test(form.email)) return '请输入正确的电子邮箱'

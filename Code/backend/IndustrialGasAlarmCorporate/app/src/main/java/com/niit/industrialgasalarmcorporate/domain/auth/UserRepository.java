@@ -15,4 +15,6 @@ public interface UserRepository {
     Optional<User> findByPhone(String phone);
 
     void save(User user);
+
+    void delete(String userUuid);
 }

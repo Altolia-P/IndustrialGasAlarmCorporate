@@ -18,6 +18,7 @@ public class DeviceVO {
     private String alertThreshold;
     private String status;
     private String createdAt;
+    private String updatedAt;
 
     private String customerName;
     private String customerPhone;

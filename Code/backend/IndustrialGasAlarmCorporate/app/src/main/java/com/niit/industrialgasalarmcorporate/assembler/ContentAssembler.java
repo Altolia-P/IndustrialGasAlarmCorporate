@@ -59,6 +59,9 @@ public final class ContentAssembler {
         if (content.getCreatedAt() != null) {
             vo.setCreatedAt(content.getCreatedAt().format(FORMATTER));
         }
+        if (content.getUpdatedAt() != null) {
+            vo.setUpdatedAt(content.getUpdatedAt().format(FORMATTER));
+        }
         return vo;
     }
 

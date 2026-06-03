@@ -148,7 +148,8 @@ public class WorkOrderRepositoryImpl implements WorkOrderRepository {
                 po.getResolution(),
                 po.getCompletedAt(),
                 po.getCreatedAt(),
-                po.getUpdatedAt()
+                po.getUpdatedAt(),
+                po.getVersion()
         );
     }
 
@@ -166,6 +167,7 @@ public class WorkOrderRepositoryImpl implements WorkOrderRepository {
         po.setCustomerPhone(workOrder.getCustomerPhone());
         po.setResolution(workOrder.getResolution());
         po.setCompletedAt(workOrder.getCompletedAt());
+        po.setVersion(workOrder.getVersion());
         return po;
     }
 }

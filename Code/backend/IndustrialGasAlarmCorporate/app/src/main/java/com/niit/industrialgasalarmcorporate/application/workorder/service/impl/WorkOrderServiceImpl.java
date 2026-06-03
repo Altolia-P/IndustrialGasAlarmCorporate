@@ -7,6 +7,7 @@ import com.niit.industrialgasalarmcorporate.assembler.WorkOrderAssembler;
 import com.niit.industrialgasalarmcorporate.common.base.Page;
 import com.niit.industrialgasalarmcorporate.common.enums.ErrorCode;
 import com.niit.industrialgasalarmcorporate.common.exception.BusinessException;
+import com.niit.industrialgasalarmcorporate.domain.alert.AlertRepository;
 import com.niit.industrialgasalarmcorporate.domain.message.MessageRepository;
 import com.niit.industrialgasalarmcorporate.domain.message.MessageStatus;
 import com.niit.industrialgasalarmcorporate.domain.staff.StaffRepository;
@@ -14,12 +15,16 @@ import com.niit.industrialgasalarmcorporate.domain.staff.StaffStatus;
 import com.niit.industrialgasalarmcorporate.domain.workorder.WorkOrder;
 import com.niit.industrialgasalarmcorporate.domain.workorder.WorkOrderRepository;
 import com.niit.industrialgasalarmcorporate.domain.workorder.WorkOrderStatus;
+import com.niit.industrialgasalarmcorporate.infrastructure.redis.DashboardCacheRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WorkOrderServiceImpl implements WorkOrderService {
@@ -27,6 +32,8 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     private final WorkOrderRepository workOrderRepository;
     private final StaffRepository staffRepository;
     private final MessageRepository messageRepository;
+    private final AlertRepository alertRepository;
+    private final DashboardCacheRepository dashboardCacheRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -53,6 +60,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
     public WorkOrderVO createWorkOrder(CreateWorkOrderDTO dto) {
         WorkOrder workOrder = WorkOrderAssembler.toEntity(dto);
         workOrderRepository.save(workOrder);
+        evictDashboardCache();
         return WorkOrderAssembler.toVO(workOrder);
     }
 
@@ -63,6 +71,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND));
         WorkOrderAssembler.updateEntity(workOrder, dto);
         workOrderRepository.save(workOrder);
+        evictDashboardCache();
         return WorkOrderAssembler.toVO(workOrder);
     }
 
@@ -80,6 +89,7 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         workOrderRepository.save(workOrder);
         staff.changeStatus(StaffStatus.WORKING);
         staffRepository.save(staff);
+        evictDashboardCache();
     }
 
     @Override
@@ -117,6 +127,17 @@ public class WorkOrderServiceImpl implements WorkOrderService {
         workOrder.complete(resolution);
         workOrderRepository.save(workOrder);
 
+        // resolveByWorkOrder: auto-resolve linked alert when work order is completed
+        String workOrderUuid = workOrder.getWorkOrderUuid();
+        if (workOrderUuid != null) {
+            alertRepository.findByWorkOrderUuid(workOrderUuid).ifPresent(alert -> {
+                if (alert.getStatus() == com.niit.industrialgasalarmcorporate.domain.alert.AlertStatus.CONFIRMED) {
+                    alert.resolve("system");
+                    alertRepository.save(alert);
+                }
+            });
+        }
+
         if (staffUuid != null) {
             long remainingWo = workOrderRepository.countByStaffAndStatus(staffUuid, WorkOrderStatus.IN_PROGRESS);
             long remainingMsg = messageRepository.countByStaffAndStatus(staffUuid, MessageStatus.IN_PROGRESS);
@@ -124,18 +145,42 @@ public class WorkOrderServiceImpl implements WorkOrderService {
                 staffRepository.findById(staffUuid).ifPresent(staff -> {
                     staff.changeStatus(StaffStatus.STANDBY);
                     staffRepository.save(staff);
+                    // 二次确认缓解 TOCTOU：若并发分配了新任务则回退状态
+                    long recheckWo = workOrderRepository.countByStaffAndStatus(staffUuid, WorkOrderStatus.IN_PROGRESS);
+                    long recheckMsg = messageRepository.countByStaffAndStatus(staffUuid, MessageStatus.IN_PROGRESS);
+                    if (recheckWo > 0 || recheckMsg > 0) {
+                        staff.changeStatus(StaffStatus.WORKING);
+                        staffRepository.save(staff);
+                    }
                 });
             }
         }
+        evictDashboardCache();
     }
 
     @Override
     @Transactional
     public void deleteWorkOrder(String workOrderUuid) {
-        if (workOrderRepository.findById(workOrderUuid).isEmpty()) {
-            throw new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND);
+        WorkOrder workOrder = workOrderRepository.findById(workOrderUuid)
+                .orElseThrow(() -> new BusinessException(ErrorCode.WORK_ORDER_NOT_FOUND));
+        if (workOrder.getStatus() == WorkOrderStatus.IN_PROGRESS) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "进行中的工单不可删除");
         }
+        // 解除关联报警的工单引用，避免悬空指针
+        alertRepository.findByWorkOrderUuid(workOrderUuid).ifPresent(alert -> {
+            alert.setWorkOrderUuid(null);
+            alertRepository.save(alert);
+        });
         workOrderRepository.deleteById(workOrderUuid);
+        evictDashboardCache();
+    }
+
+    private void evictDashboardCache() {
+        try {
+            dashboardCacheRepository.evict("dashboard:stats");
+        } catch (Exception e) {
+            log.debug("Dashboard缓存失效失败: {}", e.getMessage());
+        }
     }
 
     @Override

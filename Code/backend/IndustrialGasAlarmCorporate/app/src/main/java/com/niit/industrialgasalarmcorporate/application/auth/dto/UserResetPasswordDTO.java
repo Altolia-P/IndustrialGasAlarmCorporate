@@ -11,6 +11,6 @@ public class UserResetPasswordDTO {
     private String oldPassword;
 
     @NotBlank(message = "新密码不能为空")
-    @Size(min = 6, max = 32, message = "密码长度 6-32 位")
+    @Size(min = 8, max = 32, message = "密码长度 8-32 位")
     private String newPassword;
 }

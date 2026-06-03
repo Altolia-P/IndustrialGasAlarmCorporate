@@ -12,9 +12,7 @@ export const downloadFileApi = {
   },
 
   upload(formData: FormData): Promise<DownloadFileVO> {
-    return request.post('/admin/downloads', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    return request.post('/admin/downloads', formData)
   },
 
   remove(uuid: string): Promise<null> {
@@ -22,6 +20,6 @@ export const downloadFileApi = {
   },
 
   getDownloadUrl(uuid: string): string {
-    return `${import.meta.env.VITE_API_BASE_URL || ''}/api/v1/public/downloads/${uuid}/file`
+    return `${import.meta.env.VITE_API_BASE_URL}/public/downloads/${uuid}/file`
   }
 }

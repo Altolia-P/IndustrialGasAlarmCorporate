@@ -1,4 +1,10 @@
 import { ref, onMounted, onUnmounted } from 'vue'
+import type { NotificationVO } from '@/types/device'
+
+export interface NotificationBellApi {
+  getUnreadCount: (since?: string) => Promise<number>
+  getRecentNotifications: () => Promise<NotificationVO[]>
+}
 
 const LS_KEY = 'notification_last_seen_at'
 
@@ -12,19 +18,16 @@ function saveLastSeenAt(time: string) {
 
 export function useNotificationBell() {
   const unreadCount = ref(0)
-  const recentNotifications = ref<any[]>([])
+  const recentNotifications = ref<NotificationVO[]>([])
   const visible = ref(false)
   let timer: ReturnType<typeof setInterval> | null = null
-  let alertApi: any = null
+  let alertApi: NotificationBellApi | null = null
 
-  async function refresh(api: any) {
+  async function refresh(api: NotificationBellApi) {
     alertApi = api
     try {
       const since = getLastSeenAt()
-      // Fetch recent + count in parallel
-      const from = since
-        ? `?since=${encodeURIComponent(since)}`
-        : ''
+      // Fetch count + recent notification list
       const count = await alertApi.getUnreadCount(since || undefined)
       const recent = await alertApi.getRecentNotifications()
       unreadCount.value = count
@@ -51,7 +54,7 @@ export function useNotificationBell() {
     unreadCount.value = 0
   }
 
-  function startPolling(api: any, intervalMs = 30000) {
+  function startPolling(api: NotificationBellApi, intervalMs = 30000) {
     refresh(api)
     timer = setInterval(() => refresh(api), intervalMs)
   }

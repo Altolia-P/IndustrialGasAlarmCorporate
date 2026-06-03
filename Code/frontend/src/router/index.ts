@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getToken, getRole } from '@/utils/auth'
+import { getToken } from '@/utils/auth'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
@@ -66,6 +66,12 @@ const router = createRouter({
           name: 'Contact',
           meta: { title: '联系我们' },
           component: () => import('@/views/contact/contact.vue')
+        },
+        {
+          path: 'news',
+          name: 'NewsList',
+          meta: { title: '新闻动态' },
+          component: () => import('@/views/news/list/news-list.vue')
         },
         {
           path: 'news/:uuid',
@@ -171,6 +177,20 @@ const router = createRouter({
       ]
     },
 
+    // ===== 数据大屏路由（FR-4.13/4.14/4.15）=====
+    {
+      path: '/dashboard',
+      name: 'Dashboard',
+      meta: { title: '数据大屏', requiresAuth: true },
+      component: () => import('@/views/dashboard/DashboardView.vue')
+    },
+    {
+      path: '/dashboard/history',
+      name: 'DashboardHistory',
+      meta: { title: '历史数据', requiresAuth: true },
+      component: () => import('@/views/dashboard/HistoryView.vue')
+    },
+
     // ===== 后台路由 =====
     {
       path: '/admin',
@@ -268,24 +288,6 @@ const router = createRouter({
           component: () => import('@/views/admin/workorder/edit/admin-workorder-edit.vue')
         },
         {
-          path: 'news',
-          name: 'AdminNews',
-          meta: { title: '新闻管理', requiresAuth: true, requiresAdmin: true },
-          component: () => import('@/views/admin/news/list/admin-news-list.vue')
-        },
-        {
-          path: 'news/create',
-          name: 'AdminNewsCreate',
-          meta: { title: '新增新闻', requiresAuth: true, requiresAdmin: true },
-          component: () => import('@/views/admin/news/edit/admin-news-edit.vue')
-        },
-        {
-          path: 'news/:uuid/edit',
-          name: 'AdminNewsEdit',
-          meta: { title: '编辑新闻', requiresAuth: true, requiresAdmin: true },
-          component: () => import('@/views/admin/news/edit/admin-news-edit.vue')
-        },
-        {
           path: 'devices',
           name: 'AdminDevices',
           meta: { title: '设备管理', requiresAuth: true, requiresAdmin: true },
@@ -376,44 +378,12 @@ const router = createRouter({
 
 router.beforeEach(async (to, _from, next) => {
   const token = getToken()
-  const role = getRole()
   const isLoginPage = to.name === 'Login'
   const authStore = useAuthStore()
 
-  if (to.meta.requiresAdmin && role !== 'ADMIN') {
-    next(token ? { name: 'Home' } : { name: 'Login' })
-    return
-  }
-
-  if (to.meta.requiresStaff && role !== 'STAFF') {
-    next(token ? { name: 'Home' } : { name: 'Login' })
-    return
-  }
-
-  if (to.meta.requiresAuth && token) {
-    if (!authStore.tokenVerified) {
-      const valid = await authStore.verifyToken()
-      if (!valid) {
-        next({ name: 'Login', query: { redirect: to.fullPath } })
-        return
-      }
-    }
-    next()
-    return
-  }
-
-  if (to.meta.requiresAuth && !token) {
-    next({ name: 'Login', query: { redirect: to.fullPath } })
-    return
-  }
-
   if (isLoginPage && token) {
     if (!authStore.tokenVerified) {
-      const valid = await authStore.verifyToken()
-      if (!valid) {
-        next()
-        return
-      }
+      await authStore.verifyToken()
     }
     if (authStore.isAdmin) return next({ name: 'AdminDashboard' })
     if (authStore.isStaff) return next({ name: 'StaffDashboard' })
@@ -421,10 +391,27 @@ router.beforeEach(async (to, _from, next) => {
     return
   }
 
-  if (token && !isLoginPage) {
-    if (!authStore.tokenVerified) {
-      await authStore.verifyToken()
+  if (!isLoginPage && token && !authStore.tokenVerified) {
+    const valid = await authStore.verifyToken()
+    if (!valid) {
+      next({ name: 'Login', query: { redirect: to.fullPath } })
+      return
     }
+  }
+
+  if (to.meta.requiresAuth && !token) {
+    next({ name: 'Login', query: { redirect: to.fullPath } })
+    return
+  }
+
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    next(token ? { name: 'Home' } : { name: 'Login' })
+    return
+  }
+
+  if (to.meta.requiresStaff && !authStore.isStaff) {
+    next(token ? { name: 'Home' } : { name: 'Login' })
+    return
   }
 
   next()

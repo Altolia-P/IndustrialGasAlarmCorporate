@@ -7,11 +7,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@Profile("!test")
 public class DataInitializer implements CommandLineRunner {
 
     private final JdbcTemplate jdbcTemplate;
@@ -19,13 +21,19 @@ public class DataInitializer implements CommandLineRunner {
     private final PasswordHasher passwordHasher;
 
     private static final String DEFAULT_ADMIN = "admin";
-    private static final String DEFAULT_PASSWORD = "123456";
+    private static final String DEFAULT_PASSWORD = System.getenv().getOrDefault(
+            "DEFAULT_ADMIN_PASSWORD",
+            "Admin@" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16));
 
     @Override
     public void run(String... args) {
-        ensureTables();
-        ensureAdminUser();
-        ensureStaffUserUuid();
+        try {
+            ensureTables();
+            ensureAdminUser();
+            ensureStaffUserUuid();
+        } catch (Exception e) {
+            log.warn("数据库初始化失败（DB 不可用），跳过启动时建表: {}", e.getMessage());
+        }
     }
 
     private void ensureStaffUserUuid() {
@@ -215,19 +223,12 @@ public class DataInitializer implements CommandLineRunner {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """);
 
-        jdbcTemplate.execute("""
-                CREATE TABLE IF NOT EXISTS t_device_data_point (
-                    data_point_id   CHAR(36)     PRIMARY KEY,
-                    device_uuid     CHAR(36)     NOT NULL,
-                    recorded_at     DATETIME     NOT NULL,
-                    concentration   DECIMAL(10,4) NOT NULL,
-                    battery         DECIMAL(10,4) NULL,
-                    temperature     DECIMAL(10,4) NULL,
-                    humidity        DECIMAL(10,4) NULL,
-                    signal_strength INT          NULL DEFAULT 0,
-                    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-                """);
+        // 后补 api_token 列（如果旧表缺少）
+        try {
+            jdbcTemplate.execute("ALTER TABLE t_device ADD COLUMN api_token VARCHAR(64) NULL AFTER serial_number");
+        } catch (Exception e) {
+            log.debug("t_device.api_token 列已存在或添加失败: {}", e.getMessage());
+        }
 
         jdbcTemplate.execute("""
                 CREATE TABLE IF NOT EXISTS t_alert_rule (
@@ -322,7 +323,7 @@ public class DataInitializer implements CommandLineRunner {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """);
 
-        log.info("数据库表初始化完成 (16 tables)");
+        log.info("数据库表初始化完成 (15 tables)");
     }
 
     private void ensureAdminUser() {
@@ -332,6 +333,6 @@ public class DataInitializer implements CommandLineRunner {
         }
         User admin = new User(DEFAULT_ADMIN, passwordHasher.hash(DEFAULT_PASSWORD), "ADMIN");
         userRepository.save(admin);
-        log.info("已创建默认管理员账号: admin / <password hidden>");
+        log.info("已创建默认管理员账号: admin");
     }
 }

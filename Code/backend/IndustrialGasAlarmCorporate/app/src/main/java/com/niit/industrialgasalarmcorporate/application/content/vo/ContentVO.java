@@ -14,4 +14,5 @@ public class ContentVO {
     private String categoryName;
     private String status;
     private String createdAt;
+    private String updatedAt;
 }

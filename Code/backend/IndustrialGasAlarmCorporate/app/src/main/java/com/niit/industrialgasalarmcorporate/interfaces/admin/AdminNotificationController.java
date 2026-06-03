@@ -7,6 +7,8 @@ import com.niit.industrialgasalarmcorporate.common.base.Result;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import com.niit.industrialgasalarmcorporate.infrastructure.aop.LogOperation;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -50,9 +52,16 @@ public class AdminNotificationController {
         return Result.ok(notificationService.findByAlertUuid(uuid, page, size));
     }
 
-    @PostMapping("/notifications/{uuid}/resend")
+    @PutMapping("/notifications/{uuid}/resend")
     public Result<Void> resend(@PathVariable String uuid) {
         notificationService.resend(uuid);
         return Result.ok("重发成功", null);
+    }
+
+    @LogOperation(operation = "DELETE", targetType = "NOTIFICATION")
+    @DeleteMapping("/notifications/{uuid}")
+    public Result<Void> delete(@PathVariable String uuid) {
+        notificationService.delete(uuid);
+        return Result.ok("删除成功", null);
     }
 }

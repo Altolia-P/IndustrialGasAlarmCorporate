@@ -61,7 +61,7 @@ public class OperationLogRepositoryImpl implements OperationLogRepository {
         return new OperationLog(
                 po.getLogId(), po.getOperatorUuid(), po.getOperatorName(),
                 po.getOperation(), po.getTargetType(), po.getTargetId(),
-                po.getTargetName(), po.getDetail(), po.getIp(), po.getCreatedAt()
+                po.getTargetName(), po.getDetail(), po.getBusinessPurpose(), po.getIp(), po.getCreatedAt()
         );
     }
 
@@ -75,6 +75,7 @@ public class OperationLogRepositoryImpl implements OperationLogRepository {
         po.setTargetId(log.getTargetId());
         po.setTargetName(log.getTargetName());
         po.setDetail(log.getDetail());
+        po.setBusinessPurpose(log.getBusinessPurpose());
         po.setIp(log.getIp());
         return po;
     }

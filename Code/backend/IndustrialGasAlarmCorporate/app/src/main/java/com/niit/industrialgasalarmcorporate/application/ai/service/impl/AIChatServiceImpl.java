@@ -20,7 +20,6 @@ import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -28,6 +27,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -49,14 +50,19 @@ public class AIChatServiceImpl implements AIChatService {
             5. 回答中提及产品时使用产品全名，方便用户了解。
             """;
 
+    private static final ExecutorService AI_EXECUTOR = Executors.newFixedThreadPool(4, r -> {
+        Thread t = new Thread(r, "ai-chat-worker");
+        t.setDaemon(true);
+        return t;
+    });
+
     private final OpenAiChatModel chatModel;
     private final DeepSeekConfig deepSeekConfig;
     private final ProductRepository productRepository;
     private final ContentRepository contentRepository;
     private final AIChatRateLimitRepository rateLimitRepository;
     private final ChatSessionRepository sessionRepository;
-    @Autowired(required = false)
-    private EmbeddingSearchService embeddingSearch;
+    private final Optional<EmbeddingSearchService> embeddingSearch;
 
     @Override
     public ChatResponseVO chat(SendMessageDTO dto, String clientIp) {
@@ -83,13 +89,13 @@ public class AIChatServiceImpl implements AIChatService {
         } else {
             try {
                 reply = CompletableFuture
-                        .supplyAsync(() -> chatModel.chat(messages.toArray(new ChatMessage[0])).aiMessage().text())
+                        .supplyAsync(() -> chatModel.chat(messages.toArray(new ChatMessage[0])).aiMessage().text(), AI_EXECUTOR)
                         .get(15, TimeUnit.SECONDS);
             } catch (TimeoutException e) {
                 log.warn("DeepSeek API 调用超时: sessionId={}", sessionId);
                 reply = "抱歉，AI 服务响应超时，请稍后重试。您也可以直接浏览我们的产品和解决方案页面。";
             } catch (Exception e) {
-                log.error("DeepSeek API 调用失败: sessionId={}", sessionId, e);
+                log.warn("DeepSeek API 调用失败: sessionId={}", sessionId, e);
                 reply = "抱歉，AI 服务暂时不可用，请稍后重试。您也可以直接浏览我们的产品和解决方案页面。";
             }
         }
@@ -113,9 +119,9 @@ public class AIChatServiceImpl implements AIChatService {
     }
 
     private List<Product> searchProducts(String query) {
-        if (embeddingSearch != null) {
+        if (embeddingSearch.isPresent()) {
             try {
-                List<String> ids = embeddingSearch.searchProductIds(query, MAX_RESULTS);
+                List<String> ids = embeddingSearch.get().searchProductIds(query, MAX_RESULTS);
                 if (!ids.isEmpty()) {
                     List<Product> products = ids.stream()
                             .map(productRepository::findById)
@@ -127,16 +133,16 @@ public class AIChatServiceImpl implements AIChatService {
                     }
                 }
             } catch (Exception e) {
-                log.warn("向量检索产品失败，回退到关键字搜索: {}", e.getMessage());
+                log.warn("向量检索产品失败，回退到关键字搜索", e);
             }
         }
         return productRepository.searchByKeyword(query, MAX_RESULTS);
     }
 
     private List<Content> searchSolutions(String query) {
-        if (embeddingSearch != null) {
+        if (embeddingSearch.isPresent()) {
             try {
-                List<String> ids = embeddingSearch.searchSolutionIds(query, MAX_RESULTS);
+                List<String> ids = embeddingSearch.get().searchSolutionIds(query, MAX_RESULTS);
                 if (!ids.isEmpty()) {
                     List<Content> solutions = ids.stream()
                             .map(contentRepository::findById)
@@ -148,7 +154,7 @@ public class AIChatServiceImpl implements AIChatService {
                     }
                 }
             } catch (Exception e) {
-                log.warn("向量检索方案失败，回退到关键字搜索: {}", e.getMessage());
+                log.warn("向量检索方案失败，回退到关键字搜索", e);
             }
         }
         return contentRepository.searchByKeyword(query, MAX_RESULTS);

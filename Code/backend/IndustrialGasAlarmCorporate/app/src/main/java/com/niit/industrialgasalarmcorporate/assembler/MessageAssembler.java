@@ -2,6 +2,7 @@ package com.niit.industrialgasalarmcorporate.assembler;
 
 import com.niit.industrialgasalarmcorporate.application.message.dto.SubmitMessageDTO;
 import com.niit.industrialgasalarmcorporate.application.message.vo.MessageVO;
+import com.niit.industrialgasalarmcorporate.common.utils.HtmlEscapeUtil;
 import com.niit.industrialgasalarmcorporate.domain.message.ContactMessage;
 
 import java.time.format.DateTimeFormatter;
@@ -17,15 +18,15 @@ public final class MessageAssembler {
         return new ContactMessage(dto.getName(), dto.getPhone(), dto.getContent(), ip);
     }
 
-    public static MessageVO toVO(ContactMessage message) {
+    public static MessageVO toVO(ContactMessage message, boolean maskPhone) {
         MessageVO vo = new MessageVO();
         vo.setMessageUuid(message.getMessageUuid());
-        vo.setName(message.getName());
-        vo.setPhone(maskPhone(message.getPhone()));
-        vo.setContent(message.getContent());
+        vo.setName(HtmlEscapeUtil.escape(message.getName()));
+        vo.setPhone(maskPhone ? maskPhone(message.getPhone()) : message.getPhone());
+        vo.setContent(HtmlEscapeUtil.escape(message.getContent()));
         vo.setStatus(message.getStatus().name());
         vo.setProcessor(message.getProcessor());
-        vo.setRemark(message.getRemark());
+        vo.setRemark(HtmlEscapeUtil.escape(message.getRemark()));
         vo.setAssignedStaffUuid(message.getAssignedStaffUuid());
         vo.setAssignedStaffName(message.getAssignedStaffName());
         if (message.getSubmittedAt() != null) {

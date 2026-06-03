@@ -36,6 +36,17 @@ public class AlertRepositoryImpl implements AlertRepository {
     }
 
     @Override
+    public Optional<Alert> findByWorkOrderUuid(String workOrderUuid) {
+        LambdaQueryWrapper<AlertPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AlertPO::getWorkOrderUuid, workOrderUuid);
+        AlertPO po = alertMapper.selectOne(wrapper);
+        if (po == null) {
+            return Optional.empty();
+        }
+        return Optional.of(toDomain(po));
+    }
+
+    @Override
     public com.niit.industrialgasalarmcorporate.common.base.Page<Alert> findByDeviceUuid(
             String deviceUuid, int page, int size) {
         LambdaQueryWrapper<AlertPO> wrapper = new LambdaQueryWrapper<>();
@@ -79,11 +90,15 @@ public class AlertRepositoryImpl implements AlertRepository {
     @Override
     public void save(Alert alert) {
         AlertPO po = toPO(alert);
-        AlertPO existing = alertMapper.selectById(alert.getAlertUuid());
-        if (existing != null) {
-            alertMapper.updateById(po);
-        } else {
-            alertMapper.insert(po);
+        // 先尝试 update；若影响行数为 0（不存在），再 insert
+        int updated = alertMapper.updateById(po);
+        if (updated == 0) {
+            try {
+                alertMapper.insert(po);
+            } catch (org.springframework.dao.DuplicateKeyException e) {
+                // 并发下另一线程先插入了，重新 update
+                alertMapper.updateById(po);
+            }
         }
     }
 
@@ -123,10 +138,11 @@ public class AlertRepositoryImpl implements AlertRepository {
         if (deviceUuids == null || deviceUuids.isEmpty()) {
             return java.util.Collections.emptyList();
         }
+        int safeLimit = Math.min(Math.max(limit, 1), 1000);
         LambdaQueryWrapper<AlertPO> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(AlertPO::getDeviceUuid, deviceUuids)
                 .orderByDesc(AlertPO::getTriggeredAt)
-                .last("LIMIT " + limit);
+                .last("LIMIT " + safeLimit);
         return alertMapper.selectList(wrapper).stream()
                 .map(this::toDomain)
                 .collect(Collectors.toList());
@@ -175,7 +191,8 @@ public class AlertRepositoryImpl implements AlertRepository {
                 po.getResolvedBy(),
                 po.getWorkOrderUuid(),
                 po.getCreatedAt(),
-                po.getUpdatedAt()
+                po.getUpdatedAt(),
+                po.getVersion()
         );
     }
 
@@ -196,6 +213,7 @@ public class AlertRepositoryImpl implements AlertRepository {
         po.setResolvedAt(alert.getResolvedAt());
         po.setResolvedBy(alert.getResolvedBy());
         po.setWorkOrderUuid(alert.getWorkOrderUuid());
+        po.setVersion(alert.getVersion());
         return po;
     }
 }

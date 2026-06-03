@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,12 +46,18 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findById(productUuid)
                 .orElseThrow(() -> new ProductNotFoundException(productUuid));
         String oldCoverImage = product.getCoverImage();
+        List<String> oldImageUrls = product.getImages().stream()
+                .map(img -> (String) img.getUrl())
+                .collect(java.util.stream.Collectors.toList());
         ProductAssembler.updateEntity(product, dto);
+        productRepository.save(product);
         if (dto.getCoverImage() != null && oldCoverImage != null
                 && !oldCoverImage.equals(dto.getCoverImage())) {
             fileStorageService.delete(oldCoverImage);
         }
-        productRepository.save(product);
+        if (dto.getImages() != null && !oldImageUrls.isEmpty()) {
+            oldImageUrls.forEach(url -> fileStorageService.delete(url));
+        }
         return ProductAssembler.toVO(product);
     }
 
@@ -113,6 +120,7 @@ public class ProductServiceImpl implements ProductService {
         if (product.getCoverImage() != null) {
             fileStorageService.delete(product.getCoverImage());
         }
+        product.getImages().forEach(img -> fileStorageService.delete(img.getUrl()));
         productRepository.deleteById(productUuid);
     }
 }

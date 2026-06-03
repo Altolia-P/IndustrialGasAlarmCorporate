@@ -86,7 +86,7 @@ public class AlertRule {
     }
 
     public void update(String name, AlertRuleType ruleType, String gasType, BigDecimal threshold,
-                       int durationSeconds, AlertSeverity severity, boolean autoCreateWorkOrder) {
+                       int durationSeconds, AlertSeverity severity, Boolean autoCreateWorkOrder) {
         if (name != null && !name.isBlank()) {
             this.name = name;
         }

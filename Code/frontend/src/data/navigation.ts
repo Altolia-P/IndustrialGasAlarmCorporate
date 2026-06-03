@@ -22,7 +22,7 @@ export interface FooterSection {
 
 export const navItems: NavItem[] = [
   { name: '首页', href: '/' },
-  { name: '新闻中心', href: '/#news-section' },
+  { name: '新闻中心', href: '/news' },
   {
     name: '产品中心',
     href: '/products'

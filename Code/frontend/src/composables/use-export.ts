@@ -5,8 +5,7 @@ export interface ExportColumn {
   key: string
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Row = any
+type Row = Record<string, unknown>
 
 export function useExport() {
   async function exportToExcel(

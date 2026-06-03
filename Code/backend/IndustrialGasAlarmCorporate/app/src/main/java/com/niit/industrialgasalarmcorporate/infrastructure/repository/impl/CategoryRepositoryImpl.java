@@ -63,6 +63,16 @@ public class CategoryRepositoryImpl implements CategoryRepository {
         categoryMapper.deleteById(categoryUuid);
     }
 
+    @Override
+    public List<Category> findByParentUuid(String parentUuid) {
+        LambdaQueryWrapper<CategoryPO> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(CategoryPO::getParentUuid, parentUuid)
+                .orderByAsc(CategoryPO::getSortOrder);
+        return categoryMapper.selectList(wrapper).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
     private Category toDomain(CategoryPO po) {
         return new Category(
                 po.getCategoryUuid(),

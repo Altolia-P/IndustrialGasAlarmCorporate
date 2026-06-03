@@ -85,7 +85,7 @@ public class Customer360ServiceImpl implements Customer360Service {
         vo.setWorkOrderCount(woVOs.size());
 
         var msgPage = messageRepository.findAllWithFilter(null, phone, null, 1, 100);
-        List<MessageVO> msgVOs = msgPage.getContent().stream().map(MessageAssembler::toVO).collect(Collectors.toList());
+        List<MessageVO> msgVOs = msgPage.getContent().stream().map(m -> MessageAssembler.toVO(m, false)).collect(Collectors.toList());
         vo.setMessages(msgVOs);
         vo.setMessageCount((int) msgPage.getTotalElements());
 

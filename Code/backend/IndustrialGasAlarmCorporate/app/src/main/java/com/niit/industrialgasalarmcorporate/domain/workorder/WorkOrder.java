@@ -19,6 +19,7 @@ public class WorkOrder {
     private LocalDateTime completedAt;
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Integer version;
 
     public WorkOrder(String title, WorkOrderType type, String description, WorkOrderPriority priority,
                      String customerName, String customerPhone,
@@ -41,7 +42,8 @@ public class WorkOrder {
                      WorkOrderStatus status, WorkOrderPriority priority,
                      String customerName, String customerPhone,
                      String assignedStaffUuid, String assignedStaffName, String resolution,
-                     LocalDateTime completedAt, LocalDateTime createdAt, LocalDateTime updatedAt) {
+                     LocalDateTime completedAt, LocalDateTime createdAt, LocalDateTime updatedAt,
+                     Integer version) {
         this.workOrderUuid = workOrderUuid;
         this.title = title;
         this.type = type;
@@ -56,6 +58,7 @@ public class WorkOrder {
         this.completedAt = completedAt;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.version = version;
     }
 
     public String getWorkOrderUuid() { return workOrderUuid; }
@@ -72,6 +75,7 @@ public class WorkOrder {
     public LocalDateTime getCompletedAt() { return completedAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Integer getVersion() { return version; }
 
     public void update(String title, WorkOrderType type, String description, WorkOrderPriority priority,
                        String customerName, String customerPhone,
@@ -122,6 +126,9 @@ public class WorkOrder {
     public void complete(String resolution) {
         if (this.status == WorkOrderStatus.COMPLETED) {
             throw new IllegalStateException("工单已完成，不能重复完成");
+        }
+        if (this.assignedStaffUuid == null) {
+            throw new IllegalStateException("工单未指派，请先指派处理人");
         }
         this.resolution = resolution;
         this.status = WorkOrderStatus.COMPLETED;

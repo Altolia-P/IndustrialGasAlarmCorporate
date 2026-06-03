@@ -17,4 +17,6 @@ public interface NotificationRepository {
     long countByChannelAndCreatedAfter(NotificationChannel channel, java.time.LocalDateTime since);
 
     java.util.List<Notification> findRecentByChannel(NotificationChannel channel, int limit);
+
+    void deleteById(String notificationUuid);
 }

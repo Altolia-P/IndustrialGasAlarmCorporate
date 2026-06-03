@@ -64,6 +64,9 @@ public final class DeviceAssembler {
         }
         vo.setStatus(device.getStatus().name());
         vo.setCreatedAt(device.getCreatedAt().format(DTF));
+        if (device.getUpdatedAt() != null) {
+            vo.setUpdatedAt(device.getUpdatedAt().format(DTF));
+        }
         return vo;
     }
 }

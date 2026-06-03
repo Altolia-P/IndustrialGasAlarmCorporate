@@ -50,6 +50,9 @@ function handleLogout() {
         <el-menu-item index="/user">
           <span>首页概览</span>
         </el-menu-item>
+        <el-menu-item index="/dashboard">
+          <span>📊 数据大屏</span>
+        </el-menu-item>
         <el-menu-item index="/user/profile">
           <span>个人信息</span>
         </el-menu-item>

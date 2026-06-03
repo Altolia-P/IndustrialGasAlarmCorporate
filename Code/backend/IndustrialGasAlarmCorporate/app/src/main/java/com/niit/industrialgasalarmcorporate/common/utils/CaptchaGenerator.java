@@ -18,15 +18,12 @@ public class CaptchaGenerator {
     private static final int HEIGHT = 40;
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    private String lastText;
-
     public String generateText() {
         StringBuilder sb = new StringBuilder(LENGTH);
         for (int i = 0; i < LENGTH; i++) {
             sb.append(CHARS.charAt(RANDOM.nextInt(CHARS.length())));
         }
-        lastText = sb.toString();
-        return lastText;
+        return sb.toString();
     }
 
     public String generateBase64Image(String text) {
@@ -69,7 +66,8 @@ public class CaptchaGenerator {
             ImageIO.write(image, "png", baos);
             return "data:image/png;base64," + Base64.getEncoder().encodeToString(baos.toByteArray());
         } catch (Exception e) {
-            throw new RuntimeException("生成验证码图片失败", e);
+            throw new com.niit.industrialgasalarmcorporate.common.exception.BusinessException(
+                    com.niit.industrialgasalarmcorporate.common.enums.ErrorCode.SYSTEM_ERROR, "生成验证码图片失败");
         }
     }
 }

@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.Set;
 import java.util.UUID;
 
@@ -20,11 +21,28 @@ import java.util.UUID;
 public class FileStorageService {
 
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp");
-    private static final Set<String> ALLOWED_MIME_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
+    private static final Set<String> ALLOWED_MIME_TYPES = Set.of("image/jpeg", "image/jpg", "image/png", "image/webp");
 
     private static final Set<String> ALLOWED_DOC_EXTENSIONS = Set.of(
             "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
             "zip", "rar", "txt", "csv", "jpg", "jpeg", "png"
+    );
+
+    private static final Set<String> ALLOWED_DOC_MIME_TYPES = Set.of(
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-powerpoint",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "application/zip",
+            "application/x-zip-compressed",
+            "application/x-rar-compressed",
+            "text/plain",
+            "text/csv",
+            "image/jpeg",
+            "image/png"
     );
 
     @Value("${file.upload.path:./uploads}")
@@ -33,9 +51,17 @@ public class FileStorageService {
     @Value("${file.upload.max-size:5242880}")
     private long maxSize;
 
+    private Path imagesDir;
+    private Path documentsDir;
+
     @PostConstruct
     void init() throws IOException {
-        Files.createDirectories(Paths.get(uploadPath));
+        Path base = Paths.get(uploadPath).toAbsolutePath().normalize();
+        imagesDir = base.resolve("images");
+        documentsDir = base.resolve("documents");
+        Files.createDirectories(imagesDir);
+        Files.createDirectories(documentsDir);
+        log.info("文件存储目录已就绪: images={}, documents={}", imagesDir.toAbsolutePath(), documentsDir.toAbsolutePath());
     }
 
     public String store(MultipartFile file) {
@@ -58,14 +84,13 @@ public class FileStorageService {
             }
         }
         String storedFilename = UUID.randomUUID().toString() + "." + extension;
-        Path targetPath = Paths.get(uploadPath, storedFilename);
+        Path targetPath = imagesDir.resolve(storedFilename);
         try {
-            Files.createDirectories(targetPath.getParent());
-            file.transferTo(targetPath.toFile());
-            log.debug("文件已保存: {}", targetPath);
-            return "/uploads/" + storedFilename;
+            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+            log.debug("图片已保存: {}", targetPath.toAbsolutePath());
+            return "/uploads/images/" + storedFilename;
         } catch (IOException e) {
-            log.error("文件保存失败: {}", targetPath, e);
+            log.error("图片保存失败: {}", targetPath.toAbsolutePath(), e);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件上传失败");
         }
     }
@@ -77,6 +102,10 @@ public class FileStorageService {
         if (file.getSize() > maxSize) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "文件大小不能超过" + (maxSize / 1024 / 1024) + "MB");
         }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_DOC_MIME_TYPES.contains(contentType)) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "不支持的文件类型：" + contentType);
+        }
         String originalFilename = file.getOriginalFilename();
         String extension = "bin";
         if (originalFilename != null && originalFilename.contains(".")) {
@@ -87,14 +116,13 @@ public class FileStorageService {
             }
         }
         String storedFilename = UUID.randomUUID().toString() + "." + extension;
-        Path targetPath = Paths.get(uploadPath, storedFilename);
+        Path targetPath = documentsDir.resolve(storedFilename);
         try {
-            Files.createDirectories(targetPath.getParent());
-            file.transferTo(targetPath.toFile());
-            log.debug("文档已保存: {}", targetPath);
-            return "/uploads/" + storedFilename;
+            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+            log.debug("文档已保存: {}", targetPath.toAbsolutePath());
+            return "/uploads/documents/" + storedFilename;
         } catch (IOException e) {
-            log.error("文档保存失败: {}", targetPath, e);
+            log.error("文档保存失败: {}", targetPath.toAbsolutePath(), e);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件上传失败");
         }
     }
@@ -103,8 +131,13 @@ public class FileStorageService {
         if (fileUrl == null || !fileUrl.startsWith("/uploads/")) {
             return;
         }
-        String filename = fileUrl.substring("/uploads/".length());
-        Path targetPath = Paths.get(uploadPath, filename);
+        String relativePath = fileUrl.substring("/uploads/".length());
+        Path targetPath = Paths.get(uploadPath, relativePath).normalize();
+        Path baseDir = Paths.get(uploadPath).normalize();
+        if (!targetPath.startsWith(baseDir)) {
+            log.warn("拒绝删除越界路径: {}", fileUrl);
+            return;
+        }
         try {
             Files.deleteIfExists(targetPath);
             log.debug("文件已删除: {}", targetPath);

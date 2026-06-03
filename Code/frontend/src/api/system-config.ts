@@ -2,9 +2,6 @@ import request from '@/utils/request'
 import type { SystemConfigVO } from '@/types/system-config'
 
 export const systemConfigApi = {
-  getPublicList(): Promise<SystemConfigVO[]> {
-    return request.get('/public/system-configs')
-  },
   getAdminList(): Promise<SystemConfigVO[]> {
     return request.get('/admin/system-configs')
   },

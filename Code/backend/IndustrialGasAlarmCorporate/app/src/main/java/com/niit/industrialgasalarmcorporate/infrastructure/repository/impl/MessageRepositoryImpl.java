@@ -133,7 +133,8 @@ public class MessageRepositoryImpl implements MessageRepository {
                 po.getAssignedStaffUuid(),
                 po.getAssignedStaffName(),
                 po.getSubmittedAt(),
-                po.getProcessedAt()
+                po.getProcessedAt(),
+                po.getVersion()
         );
     }
 
@@ -151,6 +152,7 @@ public class MessageRepositoryImpl implements MessageRepository {
         po.setAssignedStaffName(message.getAssignedStaffName());
         po.setSubmittedAt(message.getSubmittedAt());
         po.setProcessedAt(message.getProcessedAt());
+        po.setVersion(message.getVersion());
         return po;
     }
 }
