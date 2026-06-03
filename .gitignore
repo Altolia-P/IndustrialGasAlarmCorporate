@@ -38,6 +38,12 @@ frontend_rules*.md
 project_rules*.md
 项目后端起始依赖.md
 
+# ── AI 生成的参考文档（非操作手册） ──
+**/目录.md
+**/依赖库.md
+**/CHANGELOG.md
+**/Skill(*).md
+
 # ── 临时笔记 ──
 **/启动指南.md
 **/手动启动步骤.md
