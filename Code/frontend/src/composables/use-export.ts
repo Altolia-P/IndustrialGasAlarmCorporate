@@ -7,13 +7,14 @@ export interface ExportColumn {
 
 export function useExport() {
   async function exportToExcel(
-    fetchFn: (params: Record<string, unknown>) => Promise<{ content: Record<string, unknown>[] }>,
-    params: Record<string, unknown>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    fetchFn: (...args: any) => Promise<{ content: any[] }>,
+    params: any,
     columns: ExportColumn[],
     filename: string
   ) {
     const page = await fetchFn({ ...params, page: 1, size: 10000 })
-    const rows = (page.content || []).map((row: Record<string, unknown>) => {
+    const rows = (page.content || []).map((row: any) => {
       const r: Record<string, string> = {}
       columns.forEach((col) => {
         r[col.header] = String(row[col.key] ?? '')
