@@ -18,11 +18,9 @@ dist/
 .env.production
 .env.staging
 
-# ── Claude Code 本地配置 ──
-.claude/settings.local.json
-**/.claude/settings.local.json
-.claude/worktrees/
-.claude/work-log.md
+# ── Claude Code 配置（不提交） ──
+.claude/
+CLAUDE.md
 
 # ── gstack 浏览器工具产物 ──
 **/.gstack/
@@ -43,6 +41,7 @@ project_rules*.md
 # ── 临时笔记 ──
 **/启动指南.md
 **/手动启动步骤.md
+**/开发流程.md
 
 # ── 临时方案文档 ──
 plans/
