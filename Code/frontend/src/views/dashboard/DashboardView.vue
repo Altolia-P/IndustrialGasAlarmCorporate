@@ -26,6 +26,7 @@ const fullscreen = ref(false)
 
 const deviceData = ref<Map<string, DeviceDataPoint[]>>(new Map())
 const deviceNames = ref<Map<string, string>>(new Map())
+const selectedDeviceUuid = ref('')
 
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 
@@ -42,8 +43,6 @@ onUnmounted(() => {
 
 watch(lastMessage, (msg) => {
   if (!msg) return
-  // Only accept real-time dataPoints from WebSocket; devices/alerts/counts
-  // come from REST polling which is correctly scoped by the backend.
   for (const dp of msg.dataPoints || []) {
     const points = deviceData.value.get(dp.deviceUuid) || []
     points.push({
@@ -72,31 +71,32 @@ async function loadInitialData() {
     }
 
     if (devicesData) {
-      const filtered = authStore.isAdmin
-        ? devicesData
-        : devicesData.filter(() => true) // CUSTOMER filtering by backend
-
-      devices.value = filtered
+      devices.value = devicesData
       totalCount.value = devicesData.length
       onlineCount.value = devicesData.filter(
         d => d.status === 'NORMAL' || d.status === 'ABNORMAL'
       ).length
 
-      // Update device names for chart
       devicesData.forEach(d => {
         deviceNames.value.set(d.deviceUuid, d.name)
       })
 
-      // Fetch latest data for each device for trend (limit to 5)
-      const topDevices = devicesData.slice(0, 5)
-      for (const d of topDevices) {
+      // Default select the first online device (simulator preferred)
+      if (!selectedDeviceUuid.value && devicesData.length > 0) {
+        const sim = devicesData.find(d => d.name.toLowerCase().includes('sim'))
+        selectedDeviceUuid.value = sim ? sim.deviceUuid : devicesData[0].deviceUuid
+      }
+
+      // Fetch latest data for selected device for initial chart
+      const targetUuid = selectedDeviceUuid.value || devicesData[0]?.deviceUuid
+      if (targetUuid) {
         try {
-          const dp = await dashboardApi.getLatestDataPoint(d.deviceUuid)
+          const dp = await dashboardApi.getLatestDataPoint(targetUuid)
           if (dp) {
-            const points = deviceData.value.get(d.deviceUuid) || []
+            const points = deviceData.value.get(targetUuid) || []
             points.push(dp)
             if (points.length > 60) points.shift()
-            deviceData.value.set(d.deviceUuid, points)
+            deviceData.value.set(targetUuid, points)
           }
         } catch {
           // skip offline devices
@@ -128,6 +128,13 @@ function goBack() {
   else if (authStore.isStaff) router.push('/staff')
   else router.push('/user')
 }
+
+const trendChartDevices = ref<{ deviceUuid: string; name: string }[]>([])
+
+// Sync device list for TrendChart selector whenever devices changes
+watch(devices, (list) => {
+  trendChartDevices.value = list.map(d => ({ deviceUuid: d.deviceUuid, name: d.name }))
+}, { immediate: true })
 </script>
 
 <template>
@@ -162,7 +169,12 @@ function goBack() {
 
       <div class="top-row">
         <div class="col-chart">
-          <TrendChart :device-data="deviceData" :device-names="deviceNames" />
+          <TrendChart
+            :device-data="deviceData"
+            :device-names="deviceNames"
+            :devices="trendChartDevices"
+            v-model:selected-device-uuid="selectedDeviceUuid"
+          />
         </div>
         <div class="col-alert">
           <AlertFeed :alerts="alerts" />
