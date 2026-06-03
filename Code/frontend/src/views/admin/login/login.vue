@@ -1,17 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useLogin } from '@/composables/use-login'
 import { ElMessage } from 'element-plus'
 
-const form = ref({ username: '', password: '' })
-const { loading, login } = useLogin()
+const form = ref({ username: '', password: '', captcha: '' })
+const { loading, captchaImage, login, refreshCaptcha } = useLogin()
+
+onMounted(() => {
+  refreshCaptcha()
+})
 
 async function handleSubmit() {
   if (!form.value.username || !form.value.password) {
     ElMessage.warning('请填写用户名和密码')
     return
   }
-  await login(form.value.username, form.value.password)
+  await login(form.value.username, form.value.password, form.value.captcha)
 }
 </script>
 
@@ -32,6 +36,25 @@ async function handleSubmit() {
             show-password
             size="large"
           />
+        </el-form-item>
+
+        <el-form-item>
+          <div class="captcha-row">
+            <el-input
+              v-model="form.captcha"
+              placeholder="验证码"
+              size="large"
+              class="captcha-input"
+              maxlength="4"
+            />
+            <img
+              :src="captchaImage"
+              alt="验证码"
+              class="captcha-img"
+              title="点击刷新验证码"
+              @click="refreshCaptcha"
+            />
+          </div>
         </el-form-item>
 
         <el-form-item>
@@ -87,6 +110,25 @@ async function handleSubmit() {
   height: 46px;
   font-size: 16px;
   letter-spacing: 2px;
+}
+
+.captcha-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.captcha-input {
+  flex: 1;
+}
+
+.captcha-img {
+  height: 40px;
+  width: 110px;
+  border-radius: 6px;
+  border: 1px solid #dcdfe6;
+  cursor: pointer;
+  object-fit: cover;
 }
 
 .login-footer {

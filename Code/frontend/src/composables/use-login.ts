@@ -1,3 +1,4 @@
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { authApi } from '@/api/auth'
@@ -9,12 +10,35 @@ export function useLogin() {
   const authStore = useAuthStore()
   const { loading, start, stop } = useLoading()
 
-  async function login(username: string, password: string) {
+  const captchaImage = ref('')
+  const captchaToken = ref('')
+
+  async function refreshCaptcha() {
+    try {
+      const data = await authApi.getCaptcha()
+      captchaImage.value = data.image
+      captchaToken.value = data.token
+    } catch {
+      // captcha load failed, retry on next interaction
+    }
+  }
+
+  async function login(username: string, password: string, captcha: string) {
+    if (!captcha) {
+      ElMessage.warning('请输入验证码')
+      return
+    }
     start()
     try {
-      const data = await authApi.login({ username, password })
+      const data = await authApi.login({
+        username,
+        password,
+        captcha,
+        captchaToken: captchaToken.value,
+      })
       onLoginSuccess(data)
     } catch (err: unknown) {
+      refreshCaptcha()
       ElMessage.error((err as { message?: string })?.message || '账号或密码错误')
       stop()
     }
@@ -38,5 +62,5 @@ export function useLogin() {
     return path.startsWith('/') && !path.startsWith('//') && !path.startsWith('\\\\')
   }
 
-  return { loading, login }
+  return { loading, captchaImage, captchaToken, login, refreshCaptcha }
 }
