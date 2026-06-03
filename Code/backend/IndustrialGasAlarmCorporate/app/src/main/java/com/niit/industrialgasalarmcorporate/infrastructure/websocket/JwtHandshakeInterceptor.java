@@ -38,7 +38,10 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
             return false;
         }
         try {
-            jwtUtil.parseToken(token);
+            var claims = jwtUtil.parseToken(token);
+            attributes.put("userUuid", claims.getSubject());
+            attributes.put("username", claims.get("username", String.class));
+            attributes.put("role", claims.get("role", String.class));
             return true;
         } catch (Exception e) {
             log.warn("WebSocket 握手拒绝: token 无效, remote={}", request.getRemoteAddress());

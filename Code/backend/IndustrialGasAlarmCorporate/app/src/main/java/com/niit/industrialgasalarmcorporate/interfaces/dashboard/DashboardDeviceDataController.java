@@ -42,12 +42,16 @@ public class DashboardDeviceDataController {
     private final AlertRepository alertRepository;
     private final UserRepository userRepository;
 
-    // ─── 数据点查询（代理 device-collector）─────────────────────────────────
+    // ─── 数据点查询（代理 device-collector + 归属校验）────────────────────
 
     @GetMapping("/device-data")
     public Result<List<DeviceDataPointVO>> getDataPoints(@RequestParam String deviceUuid,
                                                           @RequestParam(required = false) String from,
-                                                          @RequestParam(required = false) String to) {
+                                                          @RequestParam(required = false) String to,
+                                                          @RequestAttribute(required = false) String userUuid) {
+        if (!canAccessDevice(deviceUuid, userUuid)) {
+            return Result.ok(Collections.emptyList());
+        }
         List<DeviceDataPointFeignVO> feignVOs = deviceDataClient.getDataPoints(deviceUuid, from, to);
         if (feignVOs == null) {
             return Result.ok(Collections.emptyList());
@@ -56,7 +60,11 @@ public class DashboardDeviceDataController {
     }
 
     @GetMapping("/device-data/latest")
-    public Result<DeviceDataPointVO> getLatest(@RequestParam String deviceUuid) {
+    public Result<DeviceDataPointVO> getLatest(@RequestParam String deviceUuid,
+                                                @RequestAttribute(required = false) String userUuid) {
+        if (!canAccessDevice(deviceUuid, userUuid)) {
+            return Result.ok(null);
+        }
         DeviceDataPointFeignVO feignVO = deviceDataClient.getLatest(deviceUuid);
         if (feignVO == null) {
             return Result.ok(null);
@@ -188,6 +196,14 @@ public class DashboardDeviceDataController {
             return deviceRepository.findByCustomerUuid(userUuid);
         }
         return deviceRepository.findAll();
+    }
+
+    private boolean canAccessDevice(String deviceUuid, String userUuid) {
+        if (isAdmin()) return true;
+        if (userUuid == null || userUuid.isBlank()) return false;
+        return deviceRepository.findById(deviceUuid)
+                .map(d -> userUuid.equals(d.getCustomerUuid()))
+                .orElse(false);
     }
 
     private boolean isAdmin() {

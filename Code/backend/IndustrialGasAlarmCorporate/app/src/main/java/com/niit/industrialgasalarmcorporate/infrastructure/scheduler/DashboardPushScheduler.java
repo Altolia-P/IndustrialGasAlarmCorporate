@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,20 +44,36 @@ public class DashboardPushScheduler {
             return;
         }
 
-        try {
-            Map<String, Object> payload = buildPayload();
-            wsHandler.broadcast(objectMapper.writeValueAsString(payload));
-        } catch (Exception e) {
-            log.warn("大屏数据推送失败: {}", e.getMessage());
-        }
+        // Cache the global admin payload — built once for all admin sessions
+        final Map<String, Object>[] adminPayload = new Map[]{null};
+
+        wsHandler.broadcastScoped((userUuid, role) -> {
+            try {
+                Map<String, Object> payload;
+                if ("ADMIN".equals(role)) {
+                    if (adminPayload[0] == null) {
+                        adminPayload[0] = buildScopedPayload(null);
+                    }
+                    payload = adminPayload[0];
+                } else {
+                    payload = buildScopedPayload(userUuid);
+                }
+                return objectMapper.writeValueAsString(payload);
+            } catch (Exception e) {
+                log.warn("构建用户大屏数据失败: userUuid={}", userUuid, e);
+                return null;
+            }
+        });
     }
 
-    private Map<String, Object> buildPayload() {
+    private Map<String, Object> buildScopedPayload(String customerUuid) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("type", "dashboard:refresh");
         payload.put("timestamp", DTF.format(LocalDateTime.now()));
 
-        List<Device> devices = deviceRepository.findAll();
+        List<Device> devices = customerUuid != null
+                ? deviceRepository.findByCustomerUuid(customerUuid)
+                : deviceRepository.findAll();
 
         // 设备状态列表
         List<Map<String, Object>> deviceList = devices.stream().map(d -> {
@@ -70,7 +87,7 @@ public class DashboardPushScheduler {
         }).collect(Collectors.toList());
         payload.put("devices", deviceList);
 
-        // 实时浓度数据点（FR-4.11 补充）—— 取最多前 N 个设备的最新点
+        // 实时浓度数据点
         List<Map<String, Object>> dataPoints = new ArrayList<>();
         for (Device d : devices.stream().limit(MAX_TREND_DEVICES).collect(Collectors.toList())) {
             try {
@@ -90,10 +107,19 @@ public class DashboardPushScheduler {
         payload.put("dataPoints", dataPoints);
 
         // 在线率
-        long online = deviceRepository.countByStatus(DeviceStatus.NORMAL)
-                + deviceRepository.countByStatus(DeviceStatus.ABNORMAL);
-        long offline = deviceRepository.countByStatus(DeviceStatus.OFFLINE);
-        long maintenance = deviceRepository.countByStatus(DeviceStatus.MAINTENANCE);
+        List<Device> scopedDevices = customerUuid != null
+                ? deviceRepository.findByCustomerUuid(customerUuid)
+                : Collections.emptyList();
+        long online, offline, maintenance;
+        if (customerUuid != null) {
+            online = scopedDevices.stream().filter(d -> d.getStatus() == DeviceStatus.NORMAL || d.getStatus() == DeviceStatus.ABNORMAL).count();
+            offline = scopedDevices.stream().filter(d -> d.getStatus() == DeviceStatus.OFFLINE).count();
+            maintenance = scopedDevices.stream().filter(d -> d.getStatus() == DeviceStatus.MAINTENANCE).count();
+        } else {
+            online = deviceRepository.countByStatus(DeviceStatus.NORMAL) + deviceRepository.countByStatus(DeviceStatus.ABNORMAL);
+            offline = deviceRepository.countByStatus(DeviceStatus.OFFLINE);
+            maintenance = deviceRepository.countByStatus(DeviceStatus.MAINTENANCE);
+        }
         payload.put("onlineCount", (int) online);
         payload.put("offlineCount", (int) offline);
         payload.put("maintenanceCount", (int) maintenance);
@@ -102,9 +128,10 @@ public class DashboardPushScheduler {
         // 近期告警
         Map<String, String> deviceNameMap = devices.stream()
                 .collect(Collectors.toMap(Device::getDeviceUuid, Device::getName, (a, b) -> a));
-        List<Alert> alerts = alertRepository.findByDeviceUuids(
-                devices.stream().map(Device::getDeviceUuid).collect(Collectors.toList()),
-                20);
+        List<String> deviceUuids = devices.stream().map(Device::getDeviceUuid).collect(Collectors.toList());
+        List<Alert> alerts = deviceUuids.isEmpty()
+                ? Collections.emptyList()
+                : alertRepository.findByDeviceUuids(deviceUuids, 20);
         List<Map<String, Object>> alertList = alerts.stream().map(a -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("alertUuid", a.getAlertUuid());
@@ -113,13 +140,22 @@ public class DashboardPushScheduler {
             m.put("severity", a.getSeverity().name());
             m.put("alertType", a.getAlertType() != null ? a.getAlertType().name() : "—");
             m.put("message", a.getMessage());
-            m.put("concentration", a.getConcentration().toPlainString());
+            m.put("concentration", a.getConcentration() != null ? a.getConcentration().toPlainString() : "—");
             m.put("triggeredAt", DTF.format(a.getTriggeredAt()));
             return m;
         }).collect(Collectors.toList());
         payload.put("alerts", alertList);
 
-        payload.put("pendingAlertCount", (int) alertRepository.countByStatus(AlertStatus.PENDING));
+        // pending alert count
+        int pendingAlertCount;
+        if (customerUuid != null) {
+            pendingAlertCount = deviceUuids.stream()
+                    .mapToInt(uuid -> (int) alertRepository.countPendingByDevice(uuid))
+                    .sum();
+        } else {
+            pendingAlertCount = (int) alertRepository.countByStatus(AlertStatus.PENDING);
+        }
+        payload.put("pendingAlertCount", pendingAlertCount);
 
         return payload;
     }

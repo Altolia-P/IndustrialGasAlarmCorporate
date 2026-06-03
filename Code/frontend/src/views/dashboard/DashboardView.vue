@@ -42,43 +42,8 @@ onUnmounted(() => {
 
 watch(lastMessage, (msg) => {
   if (!msg) return
-  onlineCount.value = msg.onlineCount
-  totalCount.value = msg.totalCount
-  alertCount.value = msg.pendingAlertCount
-
-  const existingDeviceMap = new Map(devices.value.map(d => [d.deviceUuid, d]))
-  devices.value = (msg.devices || []).map(d => {
-    const existing = existingDeviceMap.get(d.deviceUuid)
-    return {
-      deviceUuid: d.deviceUuid,
-      name: d.name,
-      model: existing?.model || '—',
-      gasType: d.gasType,
-      installLocation: d.installLocation,
-      status: d.status,
-      latestConcentration: '—',
-      customerUuid: existing?.customerUuid || '',
-      customerName: existing?.customerName || ''
-    }
-  })
-
-  // Merge WS alert data with existing REST data to preserve deviceName/alertType
-  const existingAlertMap = new Map(alerts.value.map(a => [a.alertUuid, a]))
-  alerts.value = (msg.alerts || []).map(a => {
-    const existing = existingAlertMap.get(a.alertUuid)
-    return {
-      alertUuid: a.alertUuid,
-      deviceUuid: a.deviceUuid,
-      deviceName: existing?.deviceName || a.deviceName || '—',
-      severity: a.severity,
-      alertType: existing?.alertType || a.alertType || '—',
-      concentration: a.concentration,
-      message: a.message,
-      triggeredAt: a.triggeredAt
-    }
-  })
-
-  // 实时追点：将 WS 推送的浓度数据追加到 TrendChart
+  // Only accept real-time dataPoints from WebSocket; devices/alerts/counts
+  // come from REST polling which is correctly scoped by the backend.
   for (const dp of msg.dataPoints || []) {
     const points = deviceData.value.get(dp.deviceUuid) || []
     points.push({
