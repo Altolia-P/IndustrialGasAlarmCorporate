@@ -11,9 +11,6 @@ server:
     include-message: never
 
 spring:
-  profiles:
-    active: prod
-
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/industrial_gas_alarm_corp?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai}
     username: ${DB_USERNAME:root}

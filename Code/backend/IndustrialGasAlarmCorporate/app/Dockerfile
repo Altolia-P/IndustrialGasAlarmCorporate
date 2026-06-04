@@ -17,6 +17,6 @@ EXPOSE 8080
 ENTRYPOINT ["java", \
     "-XX:+UseG1GC", \
     "-XX:MaxGCPauseMillis=200", \
-    "-Xmx512m", \
-    "-Xms256m", \
+    "-Xmx256m", \
+    "-Xms128m", \
     "-jar", "/app/app.jar"]
