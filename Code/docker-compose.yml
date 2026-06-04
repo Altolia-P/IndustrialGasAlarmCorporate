@@ -14,6 +14,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?请设置 DB_ROOT_PASSWORD}
       MYSQL_DATABASE: industrial_gas_alarm_corp
+    command: --max-connections=30 --table-open-cache=200 --table-definition-cache=200 --performance-schema=OFF
     volumes:
       - mysql_data:/var/lib/mysql
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -35,7 +36,7 @@ services:
     image: redis:7-alpine
     container_name: igas-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 32mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     healthcheck:
@@ -56,6 +57,7 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_VM_MEMORY_HIGH_WATERMARK: "0.15"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
