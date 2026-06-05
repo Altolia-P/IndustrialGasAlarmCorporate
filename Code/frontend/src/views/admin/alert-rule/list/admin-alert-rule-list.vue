@@ -105,7 +105,7 @@ onMounted(() => fetchData())
 
 <style scoped>
 .admin-alert-rule-list { display:flex; flex-direction:column; gap:16px; }
-.search-bar { display:flex; align-items:center; justify-content:space-between; padding:20px; background:#fff; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+.search-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:20px; background:#fff; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
 .page-title { font-size:16px; font-weight:600; color:#1f2937; margin:0; }
 .table-wrapper { background:#fff; border-radius:8px; padding:0 0 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
 .loading-state { background:#fff; border-radius:8px; padding:40px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }

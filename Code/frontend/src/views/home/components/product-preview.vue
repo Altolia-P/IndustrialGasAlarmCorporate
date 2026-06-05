@@ -7,17 +7,27 @@ import type { ProductVO } from '@/types/product'
 const router = useRouter()
 const products = ref<ProductVO[]>([])
 const loading = ref(false)
+const hasMore = ref(true)
+let currentPage = 1
 
 async function fetchProducts() {
   loading.value = true
   try {
-    const data = await productApi.getPublicList({ page: 1, size: 10 })
-    products.value = data.content.filter(p => p.coverImage)
+    const data = await productApi.getPublicList({ page: currentPage, size: 6 })
+    const filtered = data.content.filter(p => p.coverImage)
+    products.value = currentPage === 1 ? filtered : [...products.value, ...filtered]
+    hasMore.value = data.number < data.totalPages - 1
   } catch {
-    products.value = []
+    if (currentPage === 1) products.value = []
   } finally {
     loading.value = false
   }
+}
+
+function loadMore() {
+  if (loading.value || !hasMore.value) return
+  currentPage++
+  fetchProducts()
 }
 
 function goProducts() {
@@ -38,12 +48,12 @@ onMounted(() => {
         <p class="section-desc">从传感器到整体解决方案，提供全系列工业气体检测与火灾报警产品</p>
       </div>
 
-      <div v-if="loading" class="loading-row">
+      <div v-if="loading && products.length === 0" class="loading-row">
         <span class="loading-text">加载中...</span>
       </div>
 
-      <div v-else-if="products.length" class="products-scroll">
-        <div class="products-track">
+      <div v-else-if="products.length" class="products-scroll-wrapper">
+        <div class="products-scroll-track">
           <div
             v-for="p in products"
             :key="p.productUuid"
@@ -66,6 +76,13 @@ onMounted(() => {
               <p class="product-desc">{{ p.description }}</p>
             </div>
           </div>
+          <div v-if="hasMore" class="load-more-trigger" @click="loadMore">
+            <span v-if="!loading" class="load-more-text">查看更多 →</span>
+            <span v-else class="load-more-text">加载中...</span>
+          </div>
+        </div>
+        <div v-if="hasMore" class="scroll-hint">
+          <span>← 左右滑动查看更多 →</span>
         </div>
       </div>
 
@@ -144,39 +161,63 @@ onMounted(() => {
   font-size: 15px;
 }
 
-.products-scroll {
-  overflow-x: auto;
-  overflow-y: visible;
-  scroll-behavior: smooth;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
-  padding-bottom: 8px;
-}
-
-.products-scroll::-webkit-scrollbar {
-  height: 5px;
-}
-
-.products-scroll::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
-  border-radius: 3px;
-}
-
-.products-track {
-  display: flex;
-  gap: 20px;
-  width: max-content;
-}
-
 .product-card {
-  width: 220px;
-  flex-shrink: 0;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
   transition: border-color 0.3s, box-shadow 0.3s;
+  width: 280px;
+  flex-shrink: 0;
+}
+
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.products-scroll-wrapper {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: visible;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+  padding-bottom: 4px;
+}
+
+.products-scroll-wrapper::-webkit-scrollbar {
+  height: 4px;
+}
+
+.products-scroll-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.products-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.products-scroll-track {
+  display: flex;
+  gap: 24px;
+  padding: 4px 0 4px;
+  width: max-content;
+}
+
+.scroll-hint {
+  text-align: center;
+  margin-top: 12px;
+}
+
+.scroll-hint span {
+  font-size: 13px;
+  color: #9ca3af;
+  letter-spacing: 1px;
 }
 
 .product-card:hover {
@@ -205,6 +246,34 @@ onMounted(() => {
   opacity: 0.3;
 }
 
+.load-more-trigger {
+  width: 160px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #d1d5db;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fafbfc;
+}
+
+.load-more-trigger:hover {
+  border-color: var(--color-primary);
+  background: #eff6ff;
+}
+
+.load-more-text {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.load-more-trigger:hover .load-more-text {
+  color: var(--color-primary);
+}
+
 .product-category-tag {
   position: absolute;
   bottom: 8px;
@@ -218,7 +287,7 @@ onMounted(() => {
 }
 
 .product-body {
-  padding: 16px;
+  padding: 24px;
 }
 
 .product-name {
@@ -245,14 +314,35 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
   .section {
     padding: 48px 0;
   }
   .section-title {
     font-size: 28px;
   }
+  .section-desc {
+    font-size: 15px;
+  }
+  .products-scroll-wrapper {
+    overflow-x: visible;
+  }
+  .products-scroll-track {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+    padding: 0;
+  }
   .product-card {
-    width: 180px;
+    width: 100%;
+  }
+  .scroll-hint {
+    display: none;
+  }
+  .load-more-trigger {
+    display: none;
   }
 }
 </style>

@@ -282,7 +282,8 @@ onMounted(() => {
 
 .search-bar {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 12px;
   background: #f9fafb;
   border-radius: 12px;
   padding: 16px 20px;

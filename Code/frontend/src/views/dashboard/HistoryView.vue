@@ -23,6 +23,7 @@ const customerFilter = ref('')
 const customFrom = ref('')
 const customTo = ref('')
 const loading = ref(false)
+const errorMsg = ref('')
 
 const customerOptions = computed(() => {
   const seen = new Set<string>()
@@ -55,7 +56,10 @@ onMounted(async () => {
     if (devs) {
       devices.value = authStore.isAdmin ? devs : devs.filter(() => true)
     }
-  } catch { /* degrade */ }
+  } catch (e: any) {
+    console.error('加载设备列表失败:', e)
+    errorMsg.value = '加载设备列表失败: ' + (e?.message || '未知错误')
+  }
 })
 
 watch(filteredDevices, (list) => {
@@ -76,8 +80,8 @@ function loadHistory() {
   let to: string | undefined
 
   if (timeRange.value === 'custom') {
-    from = customFrom.value || undefined
-    to = customTo.value || undefined
+    from = toUtcTime(customFrom.value)
+    to = toUtcTime(customTo.value)
   } else {
     const now = new Date()
     to = formatLocalTime(now)
@@ -91,11 +95,16 @@ function loadHistory() {
     dashboardApi.getAlerts(200)
   ]).then(([points, alts]) => {
     dataPoints.value = points || []
+    errorMsg.value = ''
     if (alts) {
       alerts.value = alts.filter(a => a.deviceUuid === selectedDevice.value)
     }
     loading.value = false
-  }).catch(() => { loading.value = false })
+  }).catch((e: any) => {
+    loading.value = false
+    errorMsg.value = e?.message || String(e) || '加载失败'
+    console.error('历史数据加载失败:', e)
+  })
 }
 
 const chartOption = computed(() => {
@@ -161,7 +170,14 @@ function severityTag(severity: string) {
 
 function formatLocalTime(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`
+}
+
+function toUtcTime(localDateTimeStr: string): string | undefined {
+  if (!localDateTimeStr) return undefined
+  const d = new Date(localDateTimeStr)
+  if (isNaN(d.getTime())) return undefined
+  return formatLocalTime(d)
 }
 </script>
 
@@ -220,6 +236,7 @@ function formatLocalTime(date: Date): string {
         <VChart v-if="dataPoints.length > 0" class="chart" :option="chartOption" autoresize />
         <div v-else class="chart-empty">
           <p v-if="loading">加载中...</p>
+          <p v-else-if="errorMsg" style="color: #ef4444;">{{ errorMsg }}</p>
           <p v-else>请选择设备和时间范围查询</p>
         </div>
       </div>

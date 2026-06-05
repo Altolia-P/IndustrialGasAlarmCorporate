@@ -165,4 +165,24 @@ async function handleSubmit() {
 .register-link:hover {
   text-decoration: underline;
 }
+
+@media (max-width: 480px) {
+  .login-card {
+    width: calc(100vw - 32px);
+    padding: 32px 24px;
+    margin: 0 16px;
+    border-radius: 12px;
+  }
+
+  .login-title {
+    font-size: 20px;
+    margin-bottom: 24px;
+  }
+
+  .login-footer {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+}
 </style>

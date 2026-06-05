@@ -310,6 +310,8 @@ function handlePageChange(page: number) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
   padding: 20px;
   background: #ffffff;
   border-radius: 8px;
@@ -320,6 +322,7 @@ function handlePageChange(page: number) {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .table-wrapper {

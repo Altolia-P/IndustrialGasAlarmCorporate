@@ -352,9 +352,9 @@ INSERT INTO t_content (content_uuid, title, summary, body, cover_image, type, st
 
 -- 演示客户（密码 demo123 即 123456，BCrypt）
 INSERT INTO t_admin_user (user_uuid, username, password_hash, phone, company, role) VALUES
-('demo-usr-001', 'demo', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '13800001111', '中石化工程建设有限公司', 'USER'),
-('demo-usr-002', 'zhangsan', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '13900002222', '宝钢工程技术集团', 'USER'),
-('demo-usr-003', 'lisi', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '13700003333', '华能国际电力', 'USER');
+('demo-usr-001', 'demo', '$2b$10$FlHclQIKiRiJC8yh1Xt5du0NqshEBjF0JoeCfu6S./UAUtoH1hhsW', '13800001111', '中石化工程建设有限公司', 'USER'),
+('demo-usr-002', 'zhangsan', '$2b$10$FlHclQIKiRiJC8yh1Xt5du0NqshEBjF0JoeCfu6S./UAUtoH1hhsW', '13900002222', '宝钢工程技术集团', 'USER'),
+('demo-usr-003', 'lisi', '$2b$10$FlHclQIKiRiJC8yh1Xt5du0NqshEBjF0JoeCfu6S./UAUtoH1hhsW', '13700003333', '华能国际电力', 'USER');
 
 -- 演示员工（供工单指派）
 INSERT INTO t_staff (staff_uuid, name, phone, email, role, status) VALUES
@@ -532,9 +532,9 @@ INSERT INTO t_download_file (download_uuid, display_name, original_name, file_si
 
 -- 补充客户（各行业代表）
 INSERT INTO t_admin_user (user_uuid, username, password_hash, phone, company, role) VALUES
-('demo-usr-004', 'wangwu',  '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '13600004444', '万华化学集团',        'USER'),
-('demo-usr-005', 'zhaoliu', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '13500005555', '国家管网集团',        'USER'),
-('demo-usr-006', 'sunqi',   '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '13400006666', '延长石油集团',        'USER');
+('demo-usr-004', 'wangwu',  '$2b$10$FlHclQIKiRiJC8yh1Xt5du0NqshEBjF0JoeCfu6S./UAUtoH1hhsW', '13600004444', '万华化学集团',        'USER'),
+('demo-usr-005', 'zhaoliu', '$2b$10$FlHclQIKiRiJC8yh1Xt5du0NqshEBjF0JoeCfu6S./UAUtoH1hhsW', '13500005555', '国家管网集团',        'USER'),
+('demo-usr-006', 'sunqi',   '$2b$10$FlHclQIKiRiJC8yh1Xt5du0NqshEBjF0JoeCfu6S./UAUtoH1hhsW', '13400006666', '延长石油集团',        'USER');
 
 -- 补充设备（覆盖更多状态和气体类型）
 INSERT INTO t_device (device_uuid, serial_number, api_token, name, model, customer_uuid, install_location, install_date, gas_type, range_min, range_max, alert_threshold, status) VALUES

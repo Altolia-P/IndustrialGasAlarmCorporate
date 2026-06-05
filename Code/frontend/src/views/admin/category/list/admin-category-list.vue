@@ -13,6 +13,8 @@ const dialogTitle = ref('')
 const form = ref({ name: '', parentUuid: '', sortOrder: 0 })
 const editingUuid = ref<string | null>(null)
 
+const submitting = ref(false)
+
 const flatList = computed(() => {
   const result: (CategoryVO & { level: number })[] = []
   function flatten(list: CategoryVO[], level: number) {
@@ -68,8 +70,9 @@ async function handleSubmit() {
     ElMessage.warning('请输入分类名称')
     return
   }
+  submitting.value = true
   try {
-    const parentUuid = form.value.parentUuid || ''
+    const parentUuid = form.value.parentUuid || undefined
     if (editingUuid.value) {
       await categoryApi.update(editingUuid.value, {
         name: form.value.name,
@@ -90,6 +93,8 @@ async function handleSubmit() {
     await fetchCategories()
   } catch {
     ElMessage.error('操作失败')
+  } finally {
+    submitting.value = false
   }
 }
 
@@ -174,7 +179,7 @@ onMounted(() => {
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
   </div>

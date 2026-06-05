@@ -179,14 +179,23 @@ import { clientLogos, cases } from '@/data/home'
 }
 
 @media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
   .section {
     padding: 48px 0;
   }
   .section-title {
     font-size: 28px;
   }
+  .section-desc {
+    font-size: 15px;
+  }
   .clients-row {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .case-card {
+    padding: 24px;
   }
 }
 </style>

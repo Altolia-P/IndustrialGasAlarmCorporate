@@ -214,6 +214,7 @@ function openDetail(item: MessageVO) {
 .inquiry-left {
   flex: 1;
   margin-right: 12px;
+  min-width: 0;
 }
 
 .inquiry-content {

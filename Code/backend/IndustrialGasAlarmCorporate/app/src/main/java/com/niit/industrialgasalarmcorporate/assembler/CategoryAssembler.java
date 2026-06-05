@@ -26,6 +26,7 @@ public final class CategoryAssembler {
     public static List<CategoryVO> toTree(List<Category> categories) {
         List<CategoryVO> all = categories.stream()
                 .map(CategoryAssembler::toVO)
+                .map(CategoryAssembler::normalizeParentUuid)
                 .collect(Collectors.toList());
 
         Map<String, List<CategoryVO>> childrenMap = all.stream()
@@ -34,11 +35,18 @@ public final class CategoryAssembler {
 
         List<CategoryVO> roots = new ArrayList<>();
         for (CategoryVO vo : all) {
-            vo.setChildren(childrenMap.getOrDefault(vo.getCategoryUuid(), List.of()));
+            vo.setChildren(childrenMap.getOrDefault(vo.getCategoryUuid(), new ArrayList<>()));
             if (vo.getParentUuid() == null) {
                 roots.add(vo);
             }
         }
         return roots;
+    }
+
+    private static CategoryVO normalizeParentUuid(CategoryVO vo) {
+        if (vo.getParentUuid() != null && vo.getParentUuid().isBlank()) {
+            vo.setParentUuid(null);
+        }
+        return vo;
     }
 }

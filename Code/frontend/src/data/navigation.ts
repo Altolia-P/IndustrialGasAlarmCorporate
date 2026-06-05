@@ -29,13 +29,7 @@ export const navItems: NavItem[] = [
   },
   {
     name: '解决方案',
-    href: '/solutions',
-    children: [
-      { name: '石油化工', href: '/solutions/petrochemical' },
-      { name: '冶金钢铁', href: '/solutions/metallurgy' },
-      { name: '电力能源', href: '/solutions/energy' },
-      { name: '市政燃气', href: '/solutions/gas' }
-    ]
+    href: '/solutions'
   },
   {
     name: '服务支持',
@@ -65,12 +59,7 @@ export const footerLinks: Record<string, FooterSection> = {
   },
   solutions: {
     title: '解决方案',
-    links: [
-      { name: '石油化工', href: '/solutions/petrochemical' },
-      { name: '冶金钢铁', href: '/solutions/metallurgy' },
-      { name: '电力能源', href: '/solutions/energy' },
-      { name: '市政燃气', href: '/solutions/gas' }
-    ]
+    href: '/solutions'
   },
   support: {
     title: '服务支持',

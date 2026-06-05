@@ -273,14 +273,27 @@ function goContact() {
 }
 
 @media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
+  .hero-content {
+    padding: 100px 0 48px;
+  }
   .hero-title {
     font-size: 28px;
+  }
+  .hero-subtitle {
+    font-size: 15px;
   }
   .hero-stats {
     gap: 16px;
   }
   .stat-value {
     font-size: 24px;
+  }
+  .hero-actions {
+    flex-direction: column;
+    gap: 10px;
   }
 }
 </style>

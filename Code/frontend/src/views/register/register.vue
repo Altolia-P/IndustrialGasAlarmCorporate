@@ -179,4 +179,24 @@ function goLogin() {
 .login-link:hover {
   text-decoration: underline;
 }
+
+@media (max-width: 480px) {
+  .register-card {
+    width: calc(100vw - 32px);
+    padding: 32px 24px;
+    margin: 0 16px;
+    border-radius: 12px;
+  }
+
+  .register-title {
+    font-size: 20px;
+    margin-bottom: 24px;
+  }
+
+  .register-footer {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+}
 </style>

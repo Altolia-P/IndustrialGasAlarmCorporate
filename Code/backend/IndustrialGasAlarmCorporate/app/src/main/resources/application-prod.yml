@@ -27,7 +27,6 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
       database: 0
       timeout: 5000ms
       lettuce:
@@ -41,6 +40,13 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+
+  cloud:
+    openfeign:
+      client:
+        config:
+          device-collector:
+            url: ${COLLECTOR_URL:http://localhost:8081}
 
 # 生产环境 CORS — 仅允许指定域名
 app:

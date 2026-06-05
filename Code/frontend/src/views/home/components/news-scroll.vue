@@ -66,10 +66,6 @@ function goNewsDetail(uuid: string) {
           </article>
         </div>
       </div>
-
-      <div v-if="newsList.length > 0" class="news-indicator">
-        <span class="news-indicator-text">← 左右滑动查看更多 →</span>
-      </div>
     </div>
   </section>
 </template>
@@ -82,7 +78,6 @@ function goNewsDetail(uuid: string) {
 .section-news {
   background: linear-gradient(180deg, var(--color-brand-hero) 0%, var(--color-brand-deeper) 50%, var(--color-brand-hero) 100%);
   position: relative;
-  overflow: hidden;
 }
 
 .section-news::before {
@@ -144,39 +139,16 @@ function goNewsDetail(uuid: string) {
 
 .news-scroll-wrapper {
   position: relative;
-  margin: 0 -24px;
-  padding: 0 24px;
-  overflow-x: auto;
-  overflow-y: visible;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
-}
-
-.news-scroll-wrapper::-webkit-scrollbar {
-  height: 4px;
-}
-
-.news-scroll-wrapper::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.news-scroll-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
 }
 
 .news-scroll-track {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
-  padding: 8px 0 24px;
-  width: max-content;
+  padding: 8px 0;
 }
 
 .news-card {
-  width: 340px;
-  flex-shrink: 0;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
@@ -186,6 +158,7 @@ function goNewsDetail(uuid: string) {
   animation: newsSlideIn 0.6s ease backwards;
   position: relative;
   overflow: hidden;
+  min-width: 0;
 }
 
 .news-card::after {
@@ -280,29 +253,32 @@ function goNewsDetail(uuid: string) {
   letter-spacing: 0.5px;
 }
 
-.news-indicator {
-  text-align: center;
-  margin-top: 12px;
-}
-
-.news-indicator-text {
-  font-size: 13px;
-  color: var(--color-text-dim);
-  letter-spacing: 1px;
-}
-
 @media (max-width: 1024px) {
-  .news-card {
-    width: 280px;
+  .news-scroll-track {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
   .section {
     padding: 48px 0;
   }
   .section-title {
     font-size: 28px;
+  }
+  .section-desc {
+    font-size: 15px;
+  }
+  .news-scroll-track {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 0;
+  }
+  .news-card {
+    padding: 24px;
   }
 }
 </style>

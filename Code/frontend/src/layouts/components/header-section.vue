@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -14,6 +14,20 @@ const mobileMenuOpen = ref(false)
 const activeDropdown = ref<string | null>(null)
 const expandedMobileGroup = ref<string | null>(null)
 let hideTimer: ReturnType<typeof setTimeout> | null = null
+
+function onResize() {
+  if (window.innerWidth > 1024 && mobileMenuOpen.value) {
+    closeMobileMenu()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('resize', onResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', onResize)
+})
 
 function showDropdown(name: string) {
   if (hideTimer) {
@@ -33,6 +47,12 @@ function hideDropdown() {
 function closeMobileMenu() {
   mobileMenuOpen.value = false
   expandedMobileGroup.value = null
+  document.body.style.overflow = ''
+}
+
+function toggleMobileMenu() {
+  mobileMenuOpen.value = !mobileMenuOpen.value
+  document.body.style.overflow = mobileMenuOpen.value ? 'hidden' : ''
 }
 
 function toggleMobileGroup(name: string) {
@@ -127,12 +147,15 @@ function handleNavClick(item: NavItem) {
         </button>
       </div>
 
-      <button class="mobile-toggle" @click="mobileMenuOpen = !mobileMenuOpen">
+      <button class="mobile-toggle" @click="toggleMobileMenu">
         <span v-if="!mobileMenuOpen">☰</span>
         <span v-else>✕</span>
       </button>
     </div>
 
+    <div v-if="mobileMenuOpen" class="mobile-overlay" @click="closeMobileMenu" @touchstart.prevent="closeMobileMenu">
+      <span class="overlay-hint">点击任意处关闭</span>
+    </div>
     <div v-if="mobileMenuOpen" class="mobile-menu">
       <div v-for="item in navItems" :key="item.name" class="mobile-nav-group">
         <div
@@ -182,9 +205,9 @@ function handleNavClick(item: NavItem) {
 }
 
 .container {
-  max-width: 1320px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 0 32px;
+  padding: 0 24px;
 }
 
 .logo-wrap {
@@ -352,13 +375,14 @@ function handleNavClick(item: NavItem) {
 }
 
 .mobile-menu {
-  display: none;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(12px);
   padding: 8px 24px 24px;
   max-height: calc(100vh - 72px);
   overflow-y: auto;
+  position: relative;
+  z-index: 1000;
 }
 
 .mobile-nav-group {
@@ -411,15 +435,31 @@ function handleNavClick(item: NavItem) {
   }
 }
 
+.mobile-overlay {
+  position: fixed;
+  inset: 0;
+  top: 72px;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 999;
+  cursor: pointer;
+}
+
+.overlay-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  pointer-events: none;
+}
+
 @media (max-width: 1024px) {
   .desktop-nav,
   .header-actions {
     display: none;
   }
   .mobile-toggle {
-    display: block;
-  }
-  .mobile-menu {
     display: block;
   }
   .logo-wrap {
@@ -432,7 +472,7 @@ function handleNavClick(item: NavItem) {
     height: 64px;
   }
   .container {
-    padding: 0 20px;
+    padding: 0 16px;
   }
 }
 </style>

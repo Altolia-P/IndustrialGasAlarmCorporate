@@ -49,9 +49,9 @@ import { footerLinks } from '@/data/navigation'
 }
 
 .container {
-  max-width: 1320px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 0 32px;
+  padding: 0 24px;
 }
 
 .footer-grid {
@@ -163,7 +163,7 @@ import { footerLinks } from '@/data/navigation'
 
 @media (max-width: 768px) {
   .container {
-    padding: 0 20px;
+    padding: 0 16px;
   }
   .footer-grid {
     grid-template-columns: 1fr;

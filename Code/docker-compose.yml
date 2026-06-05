@@ -17,6 +17,7 @@ services:
     command: --max-connections=30 --table-open-cache=200 --table-definition-cache=200 --performance-schema=OFF
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/charset.cnf:ro
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     ports:
       - "3306:3306"
@@ -57,7 +58,7 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
-      RABBITMQ_VM_MEMORY_HIGH_WATERMARK: "0.15"
+
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -91,11 +92,12 @@ services:
       DB_PASSWORD: ${DB_ROOT_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      REDIS_PASSWORD: ""
+
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: "5672"
       RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASS:-guest}
+      COLLECTOR_URL: http://collector:8081
       JWT_SECRET: ${JWT_SECRET:?请设置 JWT_SECRET}
       API_TOKEN_SHARED_KEY: ${API_TOKEN_SHARED_KEY:-changeme}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
@@ -133,7 +135,7 @@ services:
       DB_PASSWORD: ${DB_ROOT_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      REDIS_PASSWORD: ""
+
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: "5672"
       RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}

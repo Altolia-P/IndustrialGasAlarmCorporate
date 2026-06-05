@@ -159,8 +159,21 @@ function goContact() {
 }
 
 @media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
   .section {
     padding: 48px 0;
+  }
+  .cta-title {
+    font-size: 24px;
+  }
+  .cta-subtitle {
+    font-size: 15px;
+  }
+  .cta-actions {
+    flex-direction: column;
+    gap: 10px;
   }
   .cta-contact {
     grid-template-columns: 1fr;

@@ -132,14 +132,23 @@ import { advantages } from '@/data/home'
 }
 
 @media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
   .section {
     padding: 48px 0;
   }
   .section-title {
     font-size: 28px;
   }
+  .section-desc {
+    font-size: 15px;
+  }
   .advantages-grid {
     grid-template-columns: 1fr;
+  }
+  .advantage-card {
+    padding: 24px;
   }
 }
 </style>

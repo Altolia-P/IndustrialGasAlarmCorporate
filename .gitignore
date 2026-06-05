@@ -73,6 +73,9 @@ replay_pid*.log
 app-*.log
 **/app-*.log
 
+# ── 上传文件（运行时数据） ──
+**/uploads/images/
+
 # ── OS ──
 Thumbs.db
 .DS_Store

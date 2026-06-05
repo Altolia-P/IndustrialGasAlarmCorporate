@@ -1,18 +1,34 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import NotificationBell from '@/components/NotificationBell.vue'
 import { alertApi } from '@/api/device'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const sidebarCollapsed = ref(false)
+const mobileSidebarOpen = ref(false)
 
 function toggleSidebar() {
   sidebarCollapsed.value = !sidebarCollapsed.value
 }
+
+function toggleMobileSidebar() {
+  mobileSidebarOpen.value = !mobileSidebarOpen.value
+  document.body.style.overflow = mobileSidebarOpen.value ? 'hidden' : ''
+}
+
+function closeMobileSidebar() {
+  mobileSidebarOpen.value = false
+  document.body.style.overflow = ''
+}
+
+watch(() => route.path, () => {
+  closeMobileSidebar()
+})
 
 function handleLogout() {
   authStore.logout()
@@ -22,7 +38,7 @@ function handleLogout() {
 
 <template>
   <div class="dashboard-layout">
-    <aside class="dashboard-sidebar" :class="{ collapsed: sidebarCollapsed }">
+    <aside class="dashboard-sidebar" :class="{ collapsed: sidebarCollapsed, 'mobile-open': mobileSidebarOpen }">
       <div class="sidebar-header">
         <router-link to="/" class="sidebar-brand">
           <div class="brand-icon">IS</div>
@@ -109,6 +125,7 @@ function handleLogout() {
     <div class="dashboard-right">
       <header class="dashboard-header">
         <div class="header-left">
+          <button class="mobile-sidebar-toggle" @click="toggleMobileSidebar">☰</button>
           <router-link to="/" class="back-home">← 返回首页</router-link>
           <h2>{{ sidebarCollapsed ? authStore.username : ($route.meta.title || '后台管理') }}</h2>
         </div>
@@ -120,6 +137,8 @@ function handleLogout() {
         <router-view />
       </main>
     </div>
+
+    <div v-if="mobileSidebarOpen" class="sidebar-overlay" @click="closeMobileSidebar"></div>
   </div>
 </template>
 
