@@ -372,7 +372,7 @@ VALUES (
     'admin-00000000000000000000000001',
     'admin',
     -- BCrypt hash of 'admin123'
-    '$2a$10$XzoULx0wAHzIj7ITj6IEhuqxaC1yyGFlApbx1q1ezjJV95HXQ8t3S',
+    '$2b$10$0LUKZ9pbhfhPKhU1Yl43de72vcedasn/..oz4S9oxM/Fg5JuUlGHG',
     'ADMIN',
     '系统管理'
 );
